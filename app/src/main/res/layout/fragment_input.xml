@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F9F9F7">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- 1. 날짜 표시 -->
+        <TextView
+            android:id="@+id/inputDateText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2026년 4월 29일 수요일"
+            android:textSize="18sp"
+            android:textColor="#555555"
+            android:layout_gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <!-- 2. 오늘 어떤 하루였나요? (이모지 확인용) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="15dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:gravity="center">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="선택한 오늘의 기분"
+                    android:textColor="#888888"
+                    android:layout_marginBottom="12dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center">
+
+                    <ImageButton android:id="@+id/btnHappy" android:layout_width="55dp" android:layout_height="55dp"
+                        android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnSmile" android:layout_width="55dp" android:layout_height="55dp"
+                        android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnNeutral" android:layout_width="55dp" android:layout_height="55dp"
+                        android:src="@drawable/three" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnSad" android:layout_width="55dp" android:layout_height="55dp"
+                        android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnAngry" android:layout_width="55dp" android:layout_height="55dp"
+                        android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 3. 오늘의 점수 -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="15dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="오늘의 하루는 몇 점인가요?"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="10dp"/>
+
+                <SeekBar
+                    android:id="@+id/scoreSeekBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:max="100"
+                    android:progress="80"
+                    android:progressTint="#81C784"
+                    android:thumbTint="#4CAF50"/>
+
+                <TextView
+                    android:id="@+id/tvScoreValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="80점"
+                    android:layout_gravity="center"
+                    android:textColor="#4CAF50"
+                    android:textStyle="bold"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 4. 식사 여부 (아침, 점심, 저녁, 야식 모두 추가) -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="15dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="식사"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="15dp"/>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <!-- 아침 -->
+                    <CheckBox
+                        android:id="@+id/cbBreakfast"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="아침"
+                        android:button="@null"
+                        android:drawableTop="@drawable/circle_bg"
+                        android:gravity="center"
+                        android:padding="8dp"/>
+
+                    <!-- 점심 -->
+                    <CheckBox
+                        android:id="@+id/cbLunch"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="점심"
+                        android:button="@null"
+                        android:drawableTop="@drawable/circle_bg"
+                        android:gravity="center"
+                        android:padding="8dp"/>
+
+                    <!-- 저녁 -->
+                    <CheckBox
+                        android:id="@+id/cbDinner"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="저녁"
+                        android:button="@null"
+                        android:drawableTop="@drawable/circle_bg"
+                        android:gravity="center"
+                        android:padding="8dp"/>
+
+                    <!-- 야식 -->
+                    <CheckBox
+                        android:id="@+id/cbLateNight"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:text="야식"
+                        android:button="@null"
+                        android:drawableTop="@drawable/circle_bg"
+                        android:gravity="center"
+                        android:padding="8dp"/>
+
+                </LinearLayout>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 5. 일기 입력 -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="15dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="오늘의 이야기"
+                        android:textStyle="bold"
+                        android:layout_centerVertical="true"/>
+
+                    <ImageButton
+                        android:id="@+id/btnVoiceInput"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:layout_alignParentEnd="true"
+                        android:src="@android:drawable/ic_btn_speak_now"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        app:tint="#4CAF50"/>
+                </RelativeLayout>
+
+                <EditText
+                    android:id="@+id/etDiary"
+                    android:layout_width="match_parent"
+                    android:layout_height="150dp"
+                    android:hint="여기에 일기를 작성하거나 마이크를 눌러 말씀해보세요."
+                    android:background="@null"
+                    android:gravity="top"
+                    android:textSize="14sp"
+                    android:importantForAutofill="no"
+                    android:inputType="textMultiLine"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- 완료 버튼 -->
+        <Button
+            android:id="@+id/btnComplete"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:text="기록 완료"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:backgroundTint="#4CAF50"
+            app:cornerRadius="15dp"/>
+
+    </LinearLayout>
+</ScrollView>
