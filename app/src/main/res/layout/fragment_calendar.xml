@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F9F9F7"> <!-- 연한 베이지색 배경 -->
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <!-- 상단 연도/월 표시 (원하는 디자인으로 변경 가능) -->
+            <TextView
+                android:id="@+id/tv_month"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2026년 7월"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:textColor="#555555"
+                android:layout_gravity="center"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- 달력 부분 -->
+            <CalendarView
+                android:id="@+id/calendarView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <!-- 날짜 클릭 시 나타날 상세 카드 (이미지 하단 부분) -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/detailCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#FFFFFF">
+
+                <LinearLayout
+                    android:orientation="horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:padding="16dp">
+
+                    <!-- 날짜와 아이콘 영역 -->
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:layout_marginRight="16dp">
+
+                        <TextView
+                            android:id="@+id/selectedEmoji"
+                            android:layout_width="50dp"
+                            android:layout_height="50dp"
+                            android:text="😊"
+                            android:textSize="30sp"
+                            android:gravity="center"
+                            android:background="@drawable/circle_bg"/> <!-- 원형 배경 필요 -->
+
+                        <TextView
+                            android:id="@+id/selectedDate"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="13 토"
+                            android:layout_marginTop="4dp"
+                            android:background="#EEEEEE"
+                            android:paddingHorizontal="4dp"/>
+                    </LinearLayout>
+
+                    <!-- 텍스트 내용 영역 -->
+                    <LinearLayout
+                        android:orientation="vertical"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content">
+
+                        <TextView
+                            android:id="@+id/detailText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="이날의 기록이 여기에 표시됩니다."
+                            android:textColor="#333333"
+                            android:textSize="15sp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </ScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>
