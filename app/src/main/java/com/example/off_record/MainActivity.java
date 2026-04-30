@@ -29,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.calendar);
         }
 
+        //git 확인용 ~~
         // 2. 바텀 네비게이션 클릭 리스너
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
