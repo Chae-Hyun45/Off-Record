@@ -9,10 +9,14 @@ import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ImageButton;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -21,6 +25,7 @@ import java.util.Locale;
 public class InputFragment extends Fragment {
 
     private String selectedEmotion = "";
+    private RadioGroup rgInfluence, rgStress, rgFatigue, rgSleep, rgNeed, rgFeedback;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -30,22 +35,36 @@ public class InputFragment extends Fragment {
             selectedEmotion = getArguments().getString("selected_emotion", "");
         }
 
-        // 사용할 모든 뷰들을 먼저 미리 찾아둡니다 (리스너 안팎에서 공통 사용)
         SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
         TextView tvScoreValue = view.findViewById(R.id.tvScoreValue);
         EditText etDiary = view.findViewById(R.id.etDiary);
-        CheckBox cb1 = view.findViewById(R.id.cbBreakfast);
-        CheckBox cb2 = view.findViewById(R.id.cbLunch);
-        CheckBox cb3 = view.findViewById(R.id.cbDinner);
-        CheckBox cb4 = view.findViewById(R.id.cbLateNight);
+        CheckBox cbBreakfast = view.findViewById(R.id.cbBreakfast);
+        CheckBox cbLunch = view.findViewById(R.id.cbLunch);
+        CheckBox cbDinner = view.findViewById(R.id.cbDinner);
+        CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
+
+        rgInfluence = view.findViewById(R.id.rgInfluence);
+        rgStress = view.findViewById(R.id.rgStress);
+        rgFatigue = view.findViewById(R.id.rgFatigue);
+        rgSleep = view.findViewById(R.id.rgSleep);
+        rgNeed = view.findViewById(R.id.rgNeed);
+        rgFeedback = view.findViewById(R.id.rgFeedback);
+
         View btnComplete = view.findViewById(R.id.btnComplete);
 
-        setupEmotionHighlight(view, selectedEmotion);
+        setupEmotionSelection(view);
         setupScoreInput(view);
-        setupMealSelection(view);
 
-        // 1. 기존 기록이 있다면 불러와서 미리 채워넣기
-        SharedPreferences pref = getActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+        setupToggleableRadioGroup(rgInfluence);
+        setupToggleableRadioGroup(rgStress);
+        setupToggleableRadioGroup(rgFatigue);
+        setupToggleableRadioGroup(rgSleep);
+        setupToggleableRadioGroup(rgNeed);
+        setupToggleableRadioGroup(rgFeedback);
+
+        clearAllGroups();
+
+        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
         String allRecords = pref.getString("all_records", "");
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
@@ -54,66 +73,74 @@ public class InputFragment extends Fragment {
             for (String record : recordsArray) {
                 if (record.startsWith(today)) {
                     String[] detail = record.split("\\|");
-                    if (detail.length >= 5) {
-                        // 점수 세팅
-                        int savedScore = Integer.parseInt(detail[2]);
-                        seekBar.setProgress(savedScore);
-                        tvScoreValue.setText(savedScore + "점");
-                        // 일기 세팅
-                        etDiary.setText(detail[3]);
-                        // 식사 정보 세팅
-                        cb1.setChecked(detail[4].contains("아침"));
-                        cb2.setChecked(detail[4].contains("점심"));
-                        cb3.setChecked(detail[4].contains("저녁"));
-                        cb4.setChecked(detail[4].contains("야식"));
 
-                        // 체크박스 투명도 조절 (메서드에서 설정한 효과 적용)
-                        cb1.setAlpha(cb1.isChecked() ? 1.0f : 0.4f);
-                        cb2.setAlpha(cb2.isChecked() ? 1.0f : 0.4f);
-                        cb3.setAlpha(cb3.isChecked() ? 1.0f : 0.4f);
-                        cb4.setAlpha(cb4.isChecked() ? 1.0f : 0.4f);
+                    if (detail.length >= 5) {
+                        if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
+                        updateEmotionHighlight(view);
+
+                        seekBar.setProgress(Integer.parseInt(detail[2]));
+                        tvScoreValue.setText(detail[2] + "점");
+                        etDiary.setText(detail[3]);
+
+                        cbBreakfast.setChecked(detail[4].contains("아침"));
+                        cbLunch.setChecked(detail[4].contains("점심"));
+                        cbDinner.setChecked(detail[4].contains("저녁"));
+                        cbLateNight.setChecked(detail[4].contains("야식"));
                     }
+
+                    if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
+                    if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
+                    if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
+                    if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
+                    if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
+
+                    if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
                     break;
                 }
             }
+        } else {
+            updateEmotionHighlight(view);
         }
 
-        // 2. 완료 버튼 클릭 시 데이터 저장 및 화면 이동
         if (btnComplete != null) {
             btnComplete.setOnClickListener(v -> {
-                // 데이터 수집
-                int score = (seekBar != null) ? seekBar.getProgress() : 0;
-                String diary = (etDiary != null) ? etDiary.getText().toString() : "";
-                String mealInfo = (cb1.isChecked() ? "아침 " : "") + (cb2.isChecked() ? "점심 " : "")
-                        + (cb3.isChecked() ? "저녁 " : "") + (cb4.isChecked() ? "야식" : "");
-
                 String fullTime = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
+                String mealInfo = (cbBreakfast.isChecked() ? "아침 " : "")
+                        + (cbLunch.isChecked() ? "점심 " : "")
+                        + (cbDinner.isChecked() ? "저녁 " : "")
+                        + (cbLateNight.isChecked() ? "야식" : "");
 
-                // SharedPreferences 저장
+                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
+                        fullTime,
+                        selectedEmotion,
+                        seekBar.getProgress(),
+                        etDiary.getText().toString(),
+                        mealInfo,
+                        getSelectedText(rgInfluence),
+                        getSelectedText(rgStress),
+                        getSelectedText(rgFatigue),
+                        getSelectedText(rgSleep),
+                        getSelectedText(rgNeed),
+                        getSelectedText(rgFeedback));
+
                 SharedPreferences.Editor editor = pref.edit();
                 String oldRecords = pref.getString("all_records", "");
-                String[] recordsArray = oldRecords.split("##");
                 StringBuilder updatedList = new StringBuilder();
 
-                // 기존 오늘 기록 삭제 로직
-                for (String record : recordsArray) {
-                    if (!record.isEmpty() && !record.startsWith(today)) {
-                        updatedList.append(record).append("##");
+                for (String r : oldRecords.split("##")) {
+                    if (!r.isEmpty() && !r.startsWith(today)) {
+                        updatedList.append(r).append("##");
                     }
                 }
 
-                // 새 기록 추가
-                String newRecord = fullTime + "|" + selectedEmotion + "|" + score + "|" + diary + "|" + mealInfo;
-                String finalRecords = newRecord + "##" + updatedList.toString();
-
-                editor.putString("all_records", finalRecords);
+                editor.putString("all_records", newRecord + "##" + updatedList.toString());
                 editor.apply();
 
-                // 화면 이동
                 if (getActivity() != null) {
-                    getActivity().getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.frameLayout, new ExtraFragment())
-                            .commit();
+                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
+                    if (bottomNav != null) {
+                        bottomNav.setSelectedItemId(R.id.extra);
+                    }
                 }
             });
         }
@@ -121,64 +148,153 @@ public class InputFragment extends Fragment {
         return view;
     }
 
-    // 감정 강조 함수
-    private void setupEmotionHighlight(View view, String emotion) {
-        ImageButton btnHappy = view.findViewById(R.id.btnHappy);
-        ImageButton btnSmile = view.findViewById(R.id.btnSmile);
-        ImageButton btnNeutral = view.findViewById(R.id.btnNeutral);
-        ImageButton btnSad = view.findViewById(R.id.btnSad);
-        ImageButton btnAngry = view.findViewById(R.id.btnAngry);
-
-        if (btnHappy != null) btnHappy.setBackgroundResource(0);
-        if (btnSmile != null) btnSmile.setBackgroundResource(0);
-        if (btnNeutral != null) btnNeutral.setBackgroundResource(0);
-        if (btnSad != null) btnSad.setBackgroundResource(0);
-        if (btnAngry != null) btnAngry.setBackgroundResource(0);
-
-        if (emotion.equals("emo1") && btnHappy != null) btnHappy.setBackgroundResource(R.drawable.circle_bg);
-        else if (emotion.equals("emo2") && btnSmile != null) btnSmile.setBackgroundResource(R.drawable.circle_bg);
-        else if (emotion.equals("emo3") && btnNeutral != null) btnNeutral.setBackgroundResource(R.drawable.circle_bg);
-        else if (emotion.equals("emo4") && btnSad != null) btnSad.setBackgroundResource(R.drawable.circle_bg);
-        else if (emotion.equals("emo5") && btnAngry != null) btnAngry.setBackgroundResource(R.drawable.circle_bg);
+    private void setupToggleableRadioGroup(RadioGroup radioGroup) {
+        if (radioGroup == null) return;
+        applyToggleLogicRecursively(radioGroup, radioGroup);
     }
 
-    // 점수 입력 함수
-    private void setupScoreInput(View view) {
-        SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
-        TextView tvScoreValue = view.findViewById(R.id.tvScoreValue);
-        if (seekBar != null && tvScoreValue != null) {
-            tvScoreValue.setOnClickListener(v -> {
-                int current = seekBar.getProgress();
-                int next = (current >= 100) ? 0 : ((current / 10) + 1) * 10;
-                seekBar.setProgress(next);
-                tvScoreValue.setText(next + "점");
-            });
-            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-                @Override public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                    int snapped = Math.round(progress / 10.0f) * 10;
-                    tvScoreValue.setText(snapped + "점");
-                }
-                @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-                @Override public void onStopTrackingTouch(SeekBar seekBar) {
-                    int snapped = Math.round(seekBar.getProgress() / 10.0f) * 10;
-                    seekBar.setProgress(snapped);
+    private void applyToggleLogicRecursively(View view, ViewGroup rootGroup) {
+        if (view instanceof RadioButton) {
+            RadioButton radioButton = (RadioButton) view;
+
+            radioButton.setTag(false);
+            radioButton.setOnClickListener(v -> {
+                boolean wasChecked = radioButton.getTag() != null && (boolean) radioButton.getTag();
+
+                uncheckAllInGroup(rootGroup);
+
+                if (!wasChecked) {
+                    radioButton.setChecked(true);
+                    radioButton.setTag(true);
                 }
             });
+        } else if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                applyToggleLogicRecursively(viewGroup.getChildAt(i), rootGroup);
+            }
         }
     }
 
-    // 식사 선택 함수
-    private void setupMealSelection(View view) {
-        int[] mealIds = {R.id.cbBreakfast, R.id.cbLunch, R.id.cbDinner, R.id.cbLateNight};
-        for (int id : mealIds) {
-            CheckBox cb = view.findViewById(id);
-            if (cb != null) {
-                cb.setAlpha(cb.isChecked() ? 1.0f : 0.4f);
-                cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    if (isChecked) buttonView.setAlpha(1.0f);
-                    else buttonView.setAlpha(0.4f);
+    private void clearAllGroups() {
+        uncheckAllInGroup(rgInfluence);
+        uncheckAllInGroup(rgStress);
+        uncheckAllInGroup(rgFatigue);
+        uncheckAllInGroup(rgSleep);
+        uncheckAllInGroup(rgNeed);
+        uncheckAllInGroup(rgFeedback);
+    }
+
+    private void uncheckAllInGroup(ViewGroup group) {
+        if (group == null) return;
+
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+
+            if (child instanceof RadioButton) {
+                ((RadioButton) child).setChecked(false);
+                child.setTag(false);
+            } else if (child instanceof ViewGroup) {
+                uncheckAllInGroup((ViewGroup) child);
+            }
+        }
+    }
+
+    private String getSelectedText(ViewGroup group) {
+        return findCheckedText(group);
+    }
+
+    private String findCheckedText(ViewGroup group) {
+        if (group == null) return "미선택";
+
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+
+            if (child instanceof RadioButton && ((RadioButton) child).isChecked()) {
+                return ((RadioButton) child).getText().toString();
+            } else if (child instanceof ViewGroup) {
+                String text = findCheckedText((ViewGroup) child);
+                if (!text.equals("미선택")) return text;
+            }
+        }
+
+        return "미선택";
+    }
+
+    private void setRadioCheckedByText(ViewGroup group, String text) {
+        if (group == null || text == null || text.equals("미선택") || text.isEmpty()) return;
+        applyCheckedStateByText(group, text.trim());
+    }
+
+    private void applyCheckedStateByText(ViewGroup group, String text) {
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View child = group.getChildAt(i);
+
+            if (child instanceof RadioButton) {
+                RadioButton radioButton = (RadioButton) child;
+                if (radioButton.getText().toString().trim().equals(text)) {
+                    radioButton.setChecked(true);
+                    radioButton.setTag(true);
+                }
+            } else if (child instanceof ViewGroup) {
+                applyCheckedStateByText((ViewGroup) child, text);
+            }
+        }
+    }
+
+    private void setupEmotionSelection(View view) {
+        int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
+        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+
+        for (int i = 0; i < resIds.length; i++) {
+            final String code = codes[i];
+            ImageButton button = view.findViewById(resIds[i]);
+
+            if (button != null) {
+                button.setOnClickListener(v -> {
+                    selectedEmotion = code;
+                    updateEmotionHighlight(view);
                 });
             }
+        }
+    }
+
+    private void updateEmotionHighlight(View view) {
+        int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
+        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+
+        for (int i = 0; i < resIds.length; i++) {
+            ImageButton button = view.findViewById(resIds[i]);
+
+            if (button != null) {
+                button.setBackgroundResource(selectedEmotion.equals(codes[i]) ? R.drawable.circle_bg : 0);
+            }
+        }
+    }
+
+    private void setupScoreInput(View view) {
+        SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
+        TextView tvScoreValue = view.findViewById(R.id.tvScoreValue);
+
+        if (seekBar != null && tvScoreValue != null) {
+            seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    int roundedScore = Math.round(progress / 10.0f) * 10;
+                    tvScoreValue.setText(roundedScore + "점");
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    int roundedScore = Math.round(seekBar.getProgress() / 10.0f) * 10;
+                    seekBar.setProgress(roundedScore);
+                    tvScoreValue.setText(roundedScore + "점");
+                }
+            });
         }
     }
 }

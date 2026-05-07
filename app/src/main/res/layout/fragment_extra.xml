@@ -1,30 +1,47 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    <ScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="#F9F9F7">
+        android:background="#F7F7F5"
+        android:fillViewport="true">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="20dp">
+            android:padding="22dp">
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="내 기록 리스트"
-                android:textSize="22sp"
-                android:textStyle="bold"
-                android:textColor="#333333"
-                android:layout_marginBottom="20dp"/>
+                android:text="ARCHIVE"
+                android:textColor="#8C8C8C"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-            <!-- ⭐ 이 안에 기록 카드(item_record)들이 동적으로 추가됩니다 -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="내 기록 리스트"
+                android:textSize="25sp"
+                android:textStyle="bold"
+                android:textColor="#252525" />
+
+            <TextView
+                android:id="@+id/tvArchiveSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:layout_marginBottom="22dp"
+                android:text="월별로 쌓인 기록을 모아봤어요"
+                android:textColor="#777777"
+                android:textSize="14sp" />
+
             <LinearLayout
                 android:id="@+id/recordsContainer"
                 android:layout_width="match_parent"
@@ -36,10 +53,9 @@
                     android:layout_height="wrap_content"
                     android:text="기록을 불러오는 중입니다..."
                     android:gravity="center"
-                    android:layout_marginTop="50dp"/>
+                    android:layout_marginTop="50dp" />
             </LinearLayout>
 
         </LinearLayout>
     </ScrollView>
-
 </androidx.constraintlayout.widget.ConstraintLayout>
