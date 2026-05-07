@@ -1,96 +1,170 @@
-<?xml version="1.0" encoding="utf-8"?>
+
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F9F9F7"> <!-- 연한 베이지색 배경 -->
+    android:background="#FAFAF7">
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:fillViewport="true">
 
         <LinearLayout
-            android:orientation="vertical"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp">
+            android:orientation="vertical"
+            android:paddingLeft="16dp"
+            android:paddingTop="24dp"
+            android:paddingRight="16dp"
+            android:paddingBottom="24dp">
 
-            <!-- 상단 연도/월 표시 (원하는 디자인으로 변경 가능) -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/calendar_panel_bg"
+                    android:orientation="vertical"
+                    android:padding="12dp">
+
+                    <CalendarView
+                        android:id="@+id/calendarView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content" />
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
             <TextView
-                android:id="@+id/tv_month"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="2026년 7월"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                android:textColor="#555555"
-                android:layout_gravity="center"
-                android:layout_marginBottom="16dp"/>
+                android:layout_marginBottom="10dp"
+                android:text="선택 날짜 기록"
+                android:textColor="#2D2D2D"
+                android:textSize="17sp"
+                android:textStyle="bold" />
 
-            <!-- 달력 부분 -->
-            <CalendarView
-                android:id="@+id/calendarView"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-
-            <!-- 날짜 클릭 시 나타날 상세 카드 (이미지 하단 부분) -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/detailCard"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#FFFFFF">
+                app:cardBackgroundColor="#FFFFFF"
+                app:cardCornerRadius="24dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
-                    android:orientation="horizontal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="16dp">
+                    android:background="@drawable/calendar_panel_bg"
+                    android:orientation="vertical"
+                    android:padding="20dp">
 
-                    <!-- 날짜와 아이콘 영역 -->
                     <LinearLayout
-                        android:orientation="vertical"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:gravity="center"
-                        android:layout_marginRight="16dp">
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <FrameLayout
+                            android:layout_width="66dp"
+                            android:layout_height="66dp"
+                            android:background="@drawable/circle_bg">
+
+                            <ImageView
+                                android:id="@+id/selectedEmoji"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:padding="9dp"
+                                android:scaleType="fitCenter"
+                                android:src="@drawable/three" />
+
+                            <TextView
+                                android:id="@+id/tvQuestionMark"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:gravity="center"
+                                android:text="?"
+                                android:textColor="#6E746E"
+                                android:textSize="34sp"
+                                android:textStyle="bold"
+                                android:visibility="gone" />
+                        </FrameLayout>
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/selectedDate"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="07일"
+                                android:textColor="#252525"
+                                android:textSize="22sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvRecordStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="4dp"
+                                android:text="기록 없음"
+                                android:textColor="#777777"
+                                android:textSize="13sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="18dp"
+                        android:orientation="horizontal">
 
                         <TextView
-                            android:id="@+id/selectedEmoji"
-                            android:layout_width="50dp"
-                            android:layout_height="50dp"
-                            android:text="😊"
-                            android:textSize="30sp"
-                            android:gravity="center"
-                            android:background="@drawable/circle_bg"/> <!-- 원형 배경 필요 -->
-
-                        <TextView
-                            android:id="@+id/selectedDate"
+                            android:id="@+id/tvScoreChip"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="13 토"
-                            android:layout_marginTop="4dp"
-                            android:background="#EEEEEE"
-                            android:paddingHorizontal="4dp"/>
-                    </LinearLayout>
-
-                    <!-- 텍스트 내용 영역 -->
-                    <LinearLayout
-                        android:orientation="vertical"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                            android:background="@drawable/calendar_chip_bg"
+                            android:paddingHorizontal="13dp"
+                            android:paddingVertical="7dp"
+                            android:text="점수 | -"
+                            android:textColor="#555555"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
 
                         <TextView
-                            android:id="@+id/detailText"
-                            android:layout_width="match_parent"
+                            android:id="@+id/tvStressChip"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="이날의 기록이 여기에 표시됩니다."
-                            android:textColor="#333333"
-                            android:textSize="15sp"/>
+                            android:layout_marginStart="8dp"
+                            android:background="@drawable/calendar_chip_bg"
+                            android:paddingHorizontal="13dp"
+                            android:paddingVertical="7dp"
+                            android:text="스트레스 | -"
+                            android:textColor="#555555"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/detailText"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="16dp"
+                        android:lineSpacingExtra="4dp"
+                        android:text="이날의 기록이 여기에 표시됩니다."
+                        android:textColor="#303030"
+                        android:textSize="16sp" />
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
