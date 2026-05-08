@@ -126,11 +126,11 @@ public class RecordDetailFragment extends Fragment {
     }
 
     private String getEmotionName(String emotionCode) {
-        if ("emo1".equals(emotionCode)) return "매우 좋음";
-        if ("emo2".equals(emotionCode)) return "좋음";
+        if ("emo1".equals(emotionCode)) return "불편함";
+        if ("emo2".equals(emotionCode)) return "우울함";
         if ("emo3".equals(emotionCode)) return "보통";
-        if ("emo4".equals(emotionCode)) return "우울함";
-        if ("emo5".equals(emotionCode)) return "화남/불편함";
+        if ("emo4".equals(emotionCode)) return "좋음";
+        if ("emo5".equals(emotionCode)) return "매우 좋음";
         return "감정 미선택";
     }
 
