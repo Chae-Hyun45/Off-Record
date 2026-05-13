@@ -10,6 +10,9 @@ import android.widget.CalendarView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
+
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 
@@ -20,11 +23,13 @@ public class CalendarFragment extends Fragment {
 
     private TextView selectedDate, detailText, tvRecordStatus, tvScoreChip, tvStressChip, tvQuestionMark;
     private ImageView selectedEmoji;
+    private FirebaseFirestore db;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendar, container, false);
 
+        db = FirebaseFirestore.getInstance();
         CalendarView calendarView = view.findViewById(R.id.calendarView);
         selectedDate = view.findViewById(R.id.selectedDate);
         detailText = view.findViewById(R.id.detailText);
