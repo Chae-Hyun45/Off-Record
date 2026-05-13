@@ -17,19 +17,25 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class InputFragment extends Fragment {
 
     private String selectedEmotion = "";
     private RadioGroup rgInfluence, rgStress, rgFatigue, rgSleep, rgNeed, rgFeedback;
+    private FirebaseFirestore db;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_input, container, false);
+
+        db = FirebaseFirestore.getInstance();
 
         if (getArguments() != null) {
             selectedEmotion = getArguments().getString("selected_emotion", "");
@@ -136,6 +142,9 @@ public class InputFragment extends Fragment {
                 editor.putString("all_records", newRecord + "##" + updatedList.toString());
                 editor.apply();
 
+                // Firestore에 데이터 저장
+                saveToFirestore(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
+
                 if (getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
                     if (bottomNav != null) {
@@ -146,6 +155,36 @@ public class InputFragment extends Fragment {
         }
 
         return view;
+    }
+
+    private void saveToFirestore(String fullTime, String mealInfo, int score, String diary) {
+        Map<String, Object> record = new HashMap<>();
+        record.put("timestamp", fullTime);
+        record.put("emotion", selectedEmotion);
+        record.put("score", score);
+        record.put("diary", diary);
+        record.put("meals", mealInfo);
+        record.put("influence", getSelectedText(rgInfluence));
+        record.put("stress", getSelectedText(rgStress));
+        record.put("fatigue", getSelectedText(rgFatigue));
+        record.put("sleep", getSelectedText(rgSleep));
+        record.put("need", getSelectedText(rgNeed));
+        record.put("feedback", getSelectedText(rgFeedback));
+
+        // 날짜를 문서 ID로 사용하여 하루에 하나의 기록만 저장 (또는 덮어쓰기)
+        String dateId = fullTime.split(" ")[0]; 
+
+        db.collection("daily_records")
+                .document(dateId)
+                .set(record)
+                .addOnSuccessListener(aVoid -> {
+                    if (getContext() != null) {
+                        android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    android.util.Log.w("Firestore", "기록 저장 실패", e);
+                });
     }
 
     private void setupToggleableRadioGroup(RadioGroup radioGroup) {
