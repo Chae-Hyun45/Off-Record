@@ -9,15 +9,23 @@ import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
     BottomNavigationView bottomNav;
+    FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        // 0. Firestore 초기화 및 테스트 데이터 전송
+        db = FirebaseFirestore.getInstance();
+        sendTestData();
 
         bottomNav = findViewById(R.id.bottomNav);
 
@@ -58,6 +66,19 @@ public class MainActivity extends AppCompatActivity {
 
             return false;
         });
+    }
+
+    // Firestore 테스트 데이터 전송 함수
+    private void sendTestData() {
+        Map<String, Object> testData = new HashMap<>();
+        testData.put("message", "Firestore 연결 성공!");
+        testData.put("timestamp", System.currentTimeMillis());
+
+        db.collection("test_collection")
+                .document("test_doc")
+                .set(testData)
+                .addOnSuccessListener(aVoid -> android.util.Log.d("FirestoreTest", "데이터 쓰기 성공!"))
+                .addOnFailureListener(e -> android.util.Log.w("FirestoreTest", "데이터 쓰기 실패", e));
     }
 
     // 3. 감정 선택 팝업창 띄우는 함수
