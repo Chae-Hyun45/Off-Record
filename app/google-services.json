@@ -1,8 +1,8 @@
 {
   "project_info": {
     "project_number": "210822461562",
-    "project_id": "off-record-afc23",
-    "storage_bucket": "off-record-afc23.firebasestorage.app"
+    "project_id": "off-record-d4d11",
+    "storage_bucket": "off-record-d4d11.firebasestorage.app"
   },
   "client": [
     {
@@ -10,6 +10,25 @@
         "mobilesdk_app_id": "1:210822461562:android:59caa5b8d908aa2084a3c3",
         "android_client_info": {
           "package_name": "com.example.off_record"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDPzHEZY6ITjcqNdloGuxnhuj68R4uMO6g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:210822461562:android:9224b1512dce3dfe84a3c3",
+        "android_client_info": {
+          "package_name": "off_record1.app"
         }
       },
       "oauth_client": [],
