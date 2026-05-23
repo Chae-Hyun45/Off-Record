@@ -1,7 +1,5 @@
 package com.example.off_record;
 
-import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -70,43 +68,39 @@ public class InputFragment extends Fragment {
 
         clearAllGroups();
 
-        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
-        String allRecords = pref.getString("all_records", "");
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        if (allRecords.contains(today)) {
-            String[] recordsArray = allRecords.split("##");
-            for (String record : recordsArray) {
-                if (record.startsWith(today)) {
-                    String[] detail = record.split("\\|");
-
-                    if (detail.length >= 5) {
-                        if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
+        // 로컬 대신 DB에서 오늘의 기록을 가져와 화면을 채웁니다.
+        db.collection("daily_records").document(today).get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        if (selectedEmotion.isEmpty()) selectedEmotion = doc.getString("emotion");
                         updateEmotionHighlight(view);
 
-                        seekBar.setProgress(Integer.parseInt(detail[2]));
-                        tvScoreValue.setText(detail[2] + "점");
-                        etDiary.setText(detail[3]);
+                        Long scoreLong = doc.getLong("score");
+                        int score = (scoreLong != null) ? scoreLong.intValue() : 0;
+                        seekBar.setProgress(score);
+                        tvScoreValue.setText(score + "점");
+                        etDiary.setText(doc.getString("diary"));
 
-                        cbBreakfast.setChecked(detail[4].contains("아침"));
-                        cbLunch.setChecked(detail[4].contains("점심"));
-                        cbDinner.setChecked(detail[4].contains("저녁"));
-                        cbLateNight.setChecked(detail[4].contains("야식"));
+                        String meals = doc.getString("meals");
+                        if (meals != null) {
+                            cbBreakfast.setChecked(meals.contains("아침"));
+                            cbLunch.setChecked(meals.contains("점심"));
+                            cbDinner.setChecked(meals.contains("저녁"));
+                            cbLateNight.setChecked(meals.contains("야식"));
+                        }
+
+                        setRadioCheckedByText(rgInfluence, doc.getString("influence"));
+                        setRadioCheckedByText(rgStress, doc.getString("stress"));
+                        setRadioCheckedByText(rgFatigue, doc.getString("fatigue"));
+                        setRadioCheckedByText(rgSleep, doc.getString("sleep"));
+                        setRadioCheckedByText(rgNeed, doc.getString("need"));
+                        setRadioCheckedByText(rgFeedback, doc.getString("feedback"));
+                    } else {
+                        updateEmotionHighlight(view);
                     }
-
-                    if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
-                    if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
-                    if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
-                    if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
-                    if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
-
-                    if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
-                    break;
-                }
-            }
-        } else {
-            updateEmotionHighlight(view);
-        }
+                });
 
         if (btnComplete != null) {
             btnComplete.setOnClickListener(v -> {
@@ -115,32 +109,6 @@ public class InputFragment extends Fragment {
                         + (cbLunch.isChecked() ? "점심 " : "")
                         + (cbDinner.isChecked() ? "저녁 " : "")
                         + (cbLateNight.isChecked() ? "야식" : "");
-
-                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
-                        fullTime,
-                        selectedEmotion,
-                        seekBar.getProgress(),
-                        etDiary.getText().toString(),
-                        mealInfo,
-                        getSelectedText(rgInfluence),
-                        getSelectedText(rgStress),
-                        getSelectedText(rgFatigue),
-                        getSelectedText(rgSleep),
-                        getSelectedText(rgNeed),
-                        getSelectedText(rgFeedback));
-
-                SharedPreferences.Editor editor = pref.edit();
-                String oldRecords = pref.getString("all_records", "");
-                StringBuilder updatedList = new StringBuilder();
-
-                for (String r : oldRecords.split("##")) {
-                    if (!r.isEmpty() && !r.startsWith(today)) {
-                        updatedList.append(r).append("##");
-                    }
-                }
-
-                editor.putString("all_records", newRecord + "##" + updatedList.toString());
-                editor.apply();
 
                 // Firestore에 데이터 저장
                 saveToFirestore(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
