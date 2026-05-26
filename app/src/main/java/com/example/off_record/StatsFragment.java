@@ -1,14 +1,13 @@
 package com.example.off_record;
 
-import androidx.fragment.app.Fragment;
-
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import com.google.firebase.firestore.DocumentSnapshot;
+import androidx.fragment.app.Fragment;
+
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class StatsFragment extends Fragment {
@@ -23,27 +22,21 @@ public class StatsFragment extends Fragment {
         tvStatsTest = view.findViewById(R.id.tvStatsTest);
         db = FirebaseFirestore.getInstance();
 
-        loadTestData();
+        loadRecordCount();
 
         return view;
     }
 
-    private void loadTestData() {
-        db.collection("test_collection")
-                .document("test_doc")
+    private void loadRecordCount() {
+        db.collection("daily_records")
                 .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful()) {
-                        DocumentSnapshot document = task.getResult();
-                        if (document != null && document.exists()) {
-                            String message = document.getString("message");
-                            tvStatsTest.setText("Firestore 데이터: " + message);
-                        } else {
-                            tvStatsTest.setText("문서가 존재하지 않습니다.");
-                        }
-                    } else {
-                        tvStatsTest.setText("데이터 불러오기 실패: " + task.getException().getMessage());
-                    }
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    int count = queryDocumentSnapshots.size();
+                    tvStatsTest.setText("누적 감정 기록: " + count + "개");
+                })
+                .addOnFailureListener(e -> {
+                    tvStatsTest.setText("기록 통계를 불러오지 못했습니다.");
+                    android.util.Log.e("StatsFragment", "통계 불러오기 실패", e);
                 });
     }
 }
