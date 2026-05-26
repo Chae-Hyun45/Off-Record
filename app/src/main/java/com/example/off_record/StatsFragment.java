@@ -68,10 +68,12 @@ public class StatsFragment extends Fragment {
         tvStreakMessage = view.findViewById(R.id.tvStreakMessage);
 
         db = FirebaseFirestore.getInstance();
+
+        // 💡 타 프래그먼트와 완벽한 결합을 위해 "guest_user" 고향 주소를 통일합니다.
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             currentUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         } else {
-            currentUid = "GUEST_USER";
+            currentUid = "guest_user";
         }
 
         // 1. 차트 기본 레이아웃 셋팅
@@ -92,9 +94,7 @@ public class StatsFragment extends Fragment {
         lineChart.setDrawGridBackground(false);
         lineChart.getAxisRight().setEnabled(false); // 오른쪽 Y축 차단
 
-        // 🛠️ [치우침 버그 완벽 해결 치트키]
         // 왼쪽 이모지가 그려질 공간(100f)과 우측 공간(100f)의 내부 오프셋 밸런스를 강제로 똑같이 맞춥니다!
-        // 이 코드가 들어가면 그래프 선 본체가 오른쪽으로 절대 치우치지 않고 정중앙에 배치됩니다. ⭐
         lineChart.setViewPortOffsets(100f, 60f, 100f, 80f);
 
         // Y축 환경 정의 (1~5점 고정)
@@ -153,7 +153,6 @@ public class StatsFragment extends Fragment {
         protected void drawYLabels(Canvas c, float fixedPosition, float[] positions, float offset) {
             super.drawYLabels(c, fixedPosition, positions, offset);
 
-            // 🛠️ setViewPortOffsets(100f, ...) 기준선에 맞춰 이모지가 딱 정렬되도록 중심 좌푯값 세밀 조정
             float safeXPosition = mViewPortHandler.contentLeft() - emojiSize - 20f;
 
             int emojiIndex = 0;
@@ -171,7 +170,7 @@ public class StatsFragment extends Fragment {
     }
 
     /**
-     * 3. 기간 선택 토글 버튼 이벤트 관리 (1일 제거)
+     * 3. 기간 선택 토글 버튼 이벤트 관리
      */
     private void setupToggleButtons() {
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
@@ -188,7 +187,7 @@ public class StatsFragment extends Fragment {
     }
 
     /**
-     * 4. 주/월/년 선택 시 X축 글자 포맷팅 및 데이터 정렬 연동 (1일 완전 삭제)
+     * 4. 주/월/년 선택 시 X축 글자 포맷팅 및 데이터 정렬 연동
      */
     private void updateChartByPeriod(String period) {
         List<Entry> entries = new ArrayList<>();
@@ -197,7 +196,6 @@ public class StatsFragment extends Fragment {
 
         switch (period) {
             case "1주":
-                // X축에 "월", "화", "수", "목", "금", "토", "일" 매핑
                 String[] weekLabels = {"월", "화", "수", "목", "금", "토", "일"};
 
                 entries.add(new Entry(0f, getMoodOrFake(6, 4f)));
@@ -214,7 +212,6 @@ public class StatsFragment extends Fragment {
                 break;
 
             case "1개월":
-                // 오늘 날짜 기준으로 한 달 전(30일 전)부터 오늘까지 날짜 생성
                 ArrayList<String> monthLabels = new ArrayList<>();
                 SimpleDateFormat labelSdf = new SimpleDateFormat("MM/dd", Locale.KOREA);
                 Calendar cal = Calendar.getInstance();
@@ -231,12 +228,11 @@ public class StatsFragment extends Fragment {
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(monthLabels));
-                xAxis.setLabelCount(5, false); // 글자 중첩 방지용 5개 거점 세팅
+                xAxis.setLabelCount(5, false);
                 label = "최근 1개월 감정 흐름";
                 break;
 
             case "1년":
-                // X축에 "1월" ~ "12월" 순서대로 박히도록 수정
                 String[] yearLabels = {"1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"};
 
                 for (int i = 0; i < 12; i++) {
@@ -256,7 +252,6 @@ public class StatsFragment extends Fragment {
             return;
         }
 
-        // 선그래프 디자인 속성 정의
         LineDataSet dataSet = new LineDataSet(entries, label);
         dataSet.setColor(Color.parseColor("#2E7D32"));
         dataSet.setCircleColor(Color.parseColor("#4CAF50"));
@@ -265,11 +260,11 @@ public class StatsFragment extends Fragment {
         dataSet.setDrawCircleHole(true);
         dataSet.setValueTextSize(11f);
         dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);      // 부드러운 곡선 모드
+        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
 
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
-        lineChart.invalidate(); // 차트 리프레시 갱신
+        lineChart.invalidate();
     }
 
     private float getMoodOrFake(int daysAgo, float fakeValue) {
@@ -284,13 +279,15 @@ public class StatsFragment extends Fragment {
     }
 
     /**
-     * 5. 파이어베이스 데이터 조회
+     * 5. 파이어베이스 데이터 조회 (💡 5단계 독립 서랍 격리 및 데이터 규격 매핑 적용)
      */
     private void loadDiaryDataFromServer() {
         if (currentUid == null) return;
 
-        db.collection("diaries")
-                .whereEqualTo("uid", currentUid)
+        // 💡 공용 diaries 컬렉션 대신 users -> {현재UID} -> daily_records 개별 경로를 완벽히 타깃팅합니다.
+        db.collection("users")
+                .document(currentUid)
+                .collection("daily_records")
                 .get()
                 .addOnCompleteListener(task -> {
                     if (task.isSuccessful() && task.getResult() != null) {
@@ -298,9 +295,21 @@ public class StatsFragment extends Fragment {
                         diaryMoodMap.clear();
 
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            String dateStr = document.getString("date");
-                            Long moodScoreLong = document.getLong("moodScore");
-                            float moodScore = (moodScoreLong != null) ? moodScoreLong.floatValue() : 3.0f;
+                            // 💡 새 구조에서는 문서 고유의 ID 자체가 날짜 Key값(yyyy-MM-dd)입니다!
+                            String dateStr = document.getId();
+
+                            // 💡 문자열 코드형 감정 데이터("emo1"~"emo5")를 그래프 소수점 점수(1.0f~5.0f)로 매핑합니다.
+                            String emotion = document.getString("emotion");
+                            float moodScore = 3.0f; // 기본값 매핑
+                            if (emotion != null) {
+                                switch (emotion) {
+                                    case "emo1": moodScore = 1.0f; break;
+                                    case "emo2": moodScore = 2.0f; break;
+                                    case "emo3": moodScore = 3.0f; break;
+                                    case "emo4": moodScore = 4.0f; break;
+                                    case "emo5": moodScore = 5.0f; break;
+                                }
+                            }
 
                             if (dateStr != null) {
                                 diaryDatesSet.add(dateStr);

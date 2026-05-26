@@ -8,6 +8,8 @@ import android.widget.CalendarView;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import androidx.annotation.NonNull;
@@ -68,8 +70,12 @@ public class CalendarFragment extends Fragment {
     private void loadRecordForDate(String dateKey) {
         if (getActivity() == null) return;
 
-        // Firestore에서 해당 날짜의 데이터를 가져옵니다.
-        db.collection("daily_records").document(dateKey).get()
+        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
+
+        // 💡 [5단계 격리 반영] 공용 보관함이 아닌, users/{uid}/daily_records 경로에서 해당 날짜의 데이터를 가져옵니다.
+        db.collection("users").document(uid).collection("daily_records").document(dateKey).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
                         // DB에 데이터가 있는 경우
