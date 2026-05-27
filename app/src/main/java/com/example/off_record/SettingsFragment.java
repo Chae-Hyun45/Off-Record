@@ -73,15 +73,26 @@ public class SettingsFragment extends Fragment {
         updateStats();
 
         // 💡 [정원님 추가] 로그인 상태에 따른 UI 분기 처리
+        //  [교체할 코드 구역]
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
             // 🔓 로그인된 상태라면? 로그인 버튼 숨기고 로그아웃 글씨 보여주기
             if (btnLogin != null) btnLogin.setVisibility(View.GONE);
             if (tvLogout != null) tvLogout.setVisibility(View.VISIBLE);
 
-            // 💡 [이게 들어가야 해요!] 로그인한 유저의 실제 이메일 주소로 글자 바꾸기
-            if (tvAccountName != null) tvAccountName.setText(currentUser.getEmail());
-        } else {
+            // 💡 [팀장님 요구사항] 이메일을 확인해서 테스트 유저라면 사용자 닉네임으로 뿅 바꿔줍니다!
+            String email = currentUser.getEmail();
+            if (tvAccountName != null && email != null) {
+                if (email.contains("test1")) {
+                    tvAccountName.setText("사용자 1 👑");
+                } else if (email.contains("test2")) {
+                    tvAccountName.setText("사용자 2 🌟");
+                } else {
+                    tvAccountName.setText(email); // 일반 가입 유저는 이메일 그대로 노출
+                }
+            }
+        }
+        else {
             // 🔒 로그아웃된 상태라면? 로그인 버튼 보여주고 로그아웃 글씨 숨기기
             if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
             if (tvLogout != null) tvLogout.setVisibility(View.GONE);
