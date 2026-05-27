@@ -10,6 +10,8 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -37,9 +39,14 @@ public class ExtraFragment extends Fragment {
     }
 
     private void loadRecordsFromFirestore(LayoutInflater inflater) {
-        // daily_records 컬렉션에서 문서를 가져옵니다. 
-        // 문서 ID가 날짜(yyyy-MM-dd)이므로 내림차순(최신순) 정렬합니다.
-        db.collection("daily_records")
+        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
+
+        // 💡 [5단계 격리 반영] 공용 보관함이 아닌 users/{uid}/daily_records 경로를 타깃팅하여 최신순으로 정렬합니다.
+        db.collection("users")
+                .document(uid)
+                .collection("daily_records")
                 .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -90,7 +97,6 @@ public class ExtraFragment extends Fragment {
                         itemView.setFocusable(true);
                         itemView.setOnClickListener(v -> {
                             // 상세 화면으로 전달할 데이터를 생성 (기존 방식 호환을 위해 포맷팅)
-                            // "날짜|이모지|점수|일기|식사|영향|스트레스|피로|수면|필요|피드백"
                             String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                                     fullDate,
                                     emotion,
