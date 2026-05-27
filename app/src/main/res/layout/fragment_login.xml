@@ -60,5 +60,29 @@
         android:textSize="16sp"
         android:backgroundTint="#333333"
         android:textColor="#FFFFFF"/>
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="30dp"
+        android:gravity="center">
+
+        <Button
+            android:id="@+id/btnTestUser1"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="테스트 유저 1 (A)"
+            android:backgroundTint="#757575"
+            android:layout_marginEnd="8dp" />
+
+        <Button
+            android:id="@+id/btnTestUser2"
+            android:layout_width="0dp"
+            android:layout_weight="1"
+            android:layout_height="wrap_content"
+            android:text="테스트 유저 2 (B)"
+            android:backgroundTint="#757575" />
+    </LinearLayout>
 
 </LinearLayout>
