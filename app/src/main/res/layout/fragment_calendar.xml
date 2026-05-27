@@ -1,4 +1,3 @@
-
 <androidx.constraintlayout.widget.ConstraintLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -74,8 +73,7 @@
 
                         <FrameLayout
                             android:layout_width="66dp"
-                            android:layout_height="66dp"
-                            android:background="@android:color/transparent">
+                            android:layout_height="66dp">
 
                             <ImageView
                                 android:id="@+id/selectedEmoji"
