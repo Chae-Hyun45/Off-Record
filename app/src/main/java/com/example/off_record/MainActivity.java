@@ -1,18 +1,28 @@
 package com.example.off_record;
 
-import androidx.fragment.app.Fragment;
+import android.Manifest;
+import android.app.AlarmManager;
 import android.app.Dialog;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Bundle;
-import android.widget.ImageButton;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,11 +34,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // 0. Firestore 초기화 및 테스트 데이터 전송
-        db = FirebaseFirestore.getInstance();
-        sendTestData();
+        checkNotificationPermission();
 
+        db = FirebaseFirestore.getInstance();
         bottomNav = findViewById(R.id.bottomNav);
+
+        // 앱이 켜질 때, 사용자가 알림을 켜둔 상태라면 매일 알림을 다시 예약
+        setupDailyAlarm();
 
         // 1. 앱 실행 시 첫 화면은 캘린더로 설정
         if (savedInstanceState == null) {
@@ -69,17 +81,54 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    // Firestore 테스트 데이터 전송 함수
-    private void sendTestData() {
-        Map<String, Object> testData = new HashMap<>();
-        testData.put("message", "Firestore 연결 성공!");
-        testData.put("timestamp", System.currentTimeMillis());
+    private void checkNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.POST_NOTIFICATIONS},
+                        101
+                );
+            }
+        }
+    }
 
-        db.collection("test_collection")
-                .document("test_doc")
-                .set(testData)
-                .addOnSuccessListener(aVoid -> android.util.Log.d("FirestoreTest", "데이터 쓰기 성공!"))
-                .addOnFailureListener(e -> android.util.Log.w("FirestoreTest", "데이터 쓰기 실패", e));
+    private void setupDailyAlarm() {
+        SharedPreferences pref = getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+
+        if (!pref.getBoolean("alarm_on", true)) return;
+
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                this,
+                0,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        int hour = pref.getInt("alarm_hour", 21);
+        int minute = pref.getInt("alarm_minute", 0);
+
+        Calendar calendar = Calendar.getInstance();
+        calendar.set(Calendar.HOUR_OF_DAY, hour);
+        calendar.set(Calendar.MINUTE, minute);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+
+        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
+            calendar.add(Calendar.DAY_OF_YEAR, 1);
+        }
+
+        if (alarmManager != null) {
+            alarmManager.setInexactRepeating(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.getTimeInMillis(),
+                    AlarmManager.INTERVAL_DAY,
+                    pendingIntent
+            );
+        }
     }
 
     // 3. 감정 선택 팝업창 띄우는 함수
@@ -94,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         int[] emojiIds = {R.id.emo1, R.id.emo2, R.id.emo3, R.id.emo4, R.id.emo5};
 
         for (int id : emojiIds) {
-            ImageButton btn = dialog.findViewById(id);
+            View btn = dialog.findViewById(id);
             if (btn != null) {
                 btn.setOnClickListener(v -> {
                     dialog.dismiss();
