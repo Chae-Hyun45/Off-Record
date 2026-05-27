@@ -26,6 +26,8 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.material.timepicker.MaterialTimePicker;
 import com.google.android.material.timepicker.TimeFormat;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -36,6 +38,8 @@ public class SettingsFragment extends Fragment {
     private TextView tvTotalDays;
     private TextView tvAlarmTime;
     private SwitchCompat switchAlarm;
+    private FirebaseAuth mAuth; // 💡 파이어베이스 인증 객체 추가
+    private TextView tvAccountName;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -51,6 +55,7 @@ public class SettingsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
+        mAuth = FirebaseAuth.getInstance(); // 💡 초기화
         pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
 
         tvTotalDays = view.findViewById(R.id.tvTotalDays);
@@ -58,6 +63,7 @@ public class SettingsFragment extends Fragment {
         switchAlarm = view.findViewById(R.id.switchAlarm);
         Button btnLogin = view.findViewById(R.id.btnLogin);
         TextView tvLogout = view.findViewById(R.id.tvLogout);
+        tvAccountName = view.findViewById(R.id.tvAccountName);
 
         View itemNotificationTime = view.findViewById(R.id.itemNotificationTime);
         View itemLifeData = view.findViewById(R.id.itemLifeData);
@@ -65,6 +71,24 @@ public class SettingsFragment extends Fragment {
         View cardStatsReport = view.findViewById(R.id.cardStatsReport);
 
         updateStats();
+
+        // 💡 [정원님 추가] 로그인 상태에 따른 UI 분기 처리
+        FirebaseUser currentUser = mAuth.getCurrentUser();
+        if (currentUser != null) {
+            // 🔓 로그인된 상태라면? 로그인 버튼 숨기고 로그아웃 글씨 보여주기
+            if (btnLogin != null) btnLogin.setVisibility(View.GONE);
+            if (tvLogout != null) tvLogout.setVisibility(View.VISIBLE);
+
+            // 💡 [이게 들어가야 해요!] 로그인한 유저의 실제 이메일 주소로 글자 바꾸기
+            if (tvAccountName != null) tvAccountName.setText(currentUser.getEmail());
+        } else {
+            // 🔒 로그아웃된 상태라면? 로그인 버튼 보여주고 로그아웃 글씨 숨기기
+            if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
+            if (tvLogout != null) tvLogout.setVisibility(View.GONE);
+
+            // 💡 [이것도 필수!] 로그아웃되면 다시 원래대로 "게스트 ⚠️"로 돌려놓기
+            if (tvAccountName != null) tvAccountName.setText("게스트 ⚠️");
+        }
 
         boolean isAlarmOn = pref.getBoolean("alarm_on", true);
         if (switchAlarm != null) {
@@ -99,10 +123,31 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        if (btnLogin != null) btnLogin.setOnClickListener(v -> Toast.makeText(getContext(), "로그인 기능은 준비 중입니다.", Toast.LENGTH_SHORT).show());
+        // 💡 로그인 버튼 누르면 로그인 화면으로 전환
+        if (btnLogin != null) {
+            btnLogin.setOnClickListener(v -> {
+                getParentFragmentManager().beginTransaction()
+                        .replace(R.id.frameLayout, new LoginFragment())
+                        .addToBackStack(null)
+                        .commit();
+            });
+        }
+
+        // 💡 [정원님 추가] 로그아웃 버튼 누르면 진짜 파이어베이스 로그아웃 처리
+        if (tvLogout != null) {
+            tvLogout.setOnClickListener(v -> {
+                mAuth.signOut(); // 🚀 서버 로그아웃
+                Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
+
+                // 설정 화면 새로고침 (바뀐 UI 반영)
+                getParentFragmentManager().beginTransaction()
+                        .replace(R.id.frameLayout, new SettingsFragment())
+                        .commit();
+            });
+        }
+
         if (itemLifeData != null) itemLifeData.setOnClickListener(v -> Toast.makeText(getContext(), "생활 데이터 연동 설정으로 이동합니다.", Toast.LENGTH_SHORT).show());
         if (itemVoicePolicy != null) itemVoicePolicy.setOnClickListener(v -> showVoicePolicyDialog());
-        if (tvLogout != null) tvLogout.setOnClickListener(v -> Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show());
 
         return view;
     }

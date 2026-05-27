@@ -15,6 +15,8 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
@@ -70,8 +72,12 @@ public class InputFragment extends Fragment {
 
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        // 로컬 대신 DB에서 오늘의 기록을 가져와 화면을 채웁니다.
-        db.collection("daily_records").document(today).get()
+        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
+
+        // 💡 [5단계 격리 반영] 공용 보관함이 아닌, users/{uid}/daily_records 경로에서 오늘의 기록을 로드합니다.
+        db.collection("users").document(uid).collection("daily_records").document(today).get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         if (selectedEmotion.isEmpty()) selectedEmotion = doc.getString("emotion");
@@ -139,15 +145,21 @@ public class InputFragment extends Fragment {
         record.put("need", getSelectedText(rgNeed));
         record.put("feedback", getSelectedText(rgFeedback));
 
-        // 날짜를 문서 ID로 사용하여 하루에 하나의 기록만 저장 (또는 덮어쓰기)
-        String dateId = fullTime.split(" ")[0]; 
+        String dateId = fullTime.split(" ")[0];
 
-        db.collection("daily_records")
+        // 💡 [5단계 격리 반영] 저장할 때도 현재 로그인한 유저의 고유 UID를 가져옵니다.
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
+
+        // 💡 [5단계 격리 반영] users/{uid}/daily_records/{dateId} 구조로 완벽히 격리하여 저장합니다.
+        db.collection("users")
+                .document(uid)
+                .collection("daily_records")
                 .document(dateId)
                 .set(record)
                 .addOnSuccessListener(aVoid -> {
                     if (getContext() != null) {
-                        android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
+                        android.util.Log.d("Firestore", "유저별 개인 방에 기록이 성공적으로 저장되었습니다.");
                     }
                 })
                 .addOnFailureListener(e -> {
