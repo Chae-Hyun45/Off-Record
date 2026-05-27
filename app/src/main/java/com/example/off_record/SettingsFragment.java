@@ -39,6 +39,7 @@ public class SettingsFragment extends Fragment {
     private TextView tvAlarmTime;
     private SwitchCompat switchAlarm;
     private FirebaseAuth mAuth; // 💡 파이어베이스 인증 객체 추가
+    private TextView tvAccountName;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -62,6 +63,7 @@ public class SettingsFragment extends Fragment {
         switchAlarm = view.findViewById(R.id.switchAlarm);
         Button btnLogin = view.findViewById(R.id.btnLogin);
         TextView tvLogout = view.findViewById(R.id.tvLogout);
+        tvAccountName = view.findViewById(R.id.tvAccountName);
 
         View itemNotificationTime = view.findViewById(R.id.itemNotificationTime);
         View itemLifeData = view.findViewById(R.id.itemLifeData);
@@ -76,10 +78,16 @@ public class SettingsFragment extends Fragment {
             // 🔓 로그인된 상태라면? 로그인 버튼 숨기고 로그아웃 글씨 보여주기
             if (btnLogin != null) btnLogin.setVisibility(View.GONE);
             if (tvLogout != null) tvLogout.setVisibility(View.VISIBLE);
+
+            // 💡 [이게 들어가야 해요!] 로그인한 유저의 실제 이메일 주소로 글자 바꾸기
+            if (tvAccountName != null) tvAccountName.setText(currentUser.getEmail());
         } else {
             // 🔒 로그아웃된 상태라면? 로그인 버튼 보여주고 로그아웃 글씨 숨기기
             if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
             if (tvLogout != null) tvLogout.setVisibility(View.GONE);
+
+            // 💡 [이것도 필수!] 로그아웃되면 다시 원래대로 "게스트 ⚠️"로 돌려놓기
+            if (tvAccountName != null) tvAccountName.setText("게스트 ⚠️");
         }
 
         boolean isAlarmOn = pref.getBoolean("alarm_on", true);
