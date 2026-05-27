@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background">
+    android:background="#F9F9F7">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -44,11 +44,11 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center">
-                    <ImageButton android:id="@+id/btnHappy" android:layout_width="60dp" android:layout_height="60dp" android:layout_marginHorizontal="4dp" android:src="@drawable/one" android:background="@android:color/transparent" android:scaleType="fitCenter" android:padding="6dp"/>
-                    <ImageButton android:id="@+id/btnSmile" android:layout_width="60dp" android:layout_height="60dp" android:layout_marginHorizontal="4dp" android:src="@drawable/two" android:background="@android:color/transparent" android:scaleType="fitCenter" android:padding="6dp"/>
-                    <ImageButton android:id="@+id/btnNeutral" android:layout_width="60dp" android:layout_height="60dp" android:layout_marginHorizontal="4dp" android:src="@drawable/three" android:background="@android:color/transparent" android:scaleType="fitCenter" android:padding="6dp"/>
-                    <ImageButton android:id="@+id/btnSad" android:layout_width="60dp" android:layout_height="60dp" android:layout_marginHorizontal="4dp" android:src="@drawable/four" android:background="@android:color/transparent" android:scaleType="fitCenter" android:padding="6dp"/>
-                    <ImageButton android:id="@+id/btnAngry" android:layout_width="60dp" android:layout_height="60dp" android:layout_marginHorizontal="4dp" android:src="@drawable/five" android:background="@android:color/transparent" android:scaleType="fitCenter" android:padding="6dp"/>
+                    <ImageButton android:id="@+id/btnHappy" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnSmile" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnNeutral" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/three" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnSad" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    <ImageButton android:id="@+id/btnAngry" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
                 </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>

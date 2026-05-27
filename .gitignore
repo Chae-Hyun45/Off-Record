@@ -12,10 +12,4 @@
 /captures
 .externalNativeBuild
 .cxx
-
-# Firebase & Google Services
-# app/google-services.json (Shared for collaboration)
-
-# Signing files
-*.jks
-*.keystore
+local.properties

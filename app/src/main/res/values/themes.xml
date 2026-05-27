@@ -1,12 +1,8 @@
-<resources xmlns:tools="http://schemas.android.com/tools">    <!-- Base application theme. -->
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
     <style name="Base.Theme.OffRecord" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Customize your light theme here. -->
         <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
-    </style>
-
-    <!-- res/values/themes.xml -->
-    <style name="MyMaterialTimePickerTheme" parent="Theme.Material3.DayNight.Dialog">
-        <item name="colorPrimary">?attr/colorPrimary</item>
     </style>
 
     <style name="Theme.OffRecord" parent="Base.Theme.OffRecord" />

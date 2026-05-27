@@ -1,5 +1,7 @@
 package com.example.off_record;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -10,128 +12,87 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.firestore.FirebaseFirestore;
-import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import androidx.fragment.app.Fragment;
 
 public class ExtraFragment extends Fragment {
 
-    private FirebaseFirestore db;
-    private LinearLayout recordsContainer;
-    private TextView tvArchiveSummary;
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_extra, container, false);
-        recordsContainer = view.findViewById(R.id.recordsContainer);
-        tvArchiveSummary = view.findViewById(R.id.tvArchiveSummary);
+        LinearLayout recordsContainer = view.findViewById(R.id.recordsContainer);
+        TextView tvArchiveSummary = view.findViewById(R.id.tvArchiveSummary);
 
-        db = FirebaseFirestore.getInstance();
+        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+        String allRecords = pref.getString("all_records", "");
+
         recordsContainer.removeAllViews();
 
-        loadRecordsFromFirestore(inflater);
+        if (allRecords.isEmpty()) {
+            tvArchiveSummary.setText("아직 쌓인 기록이 없어요");
+            recordsContainer.addView(createEmptyView());
+        } else {
+            String[] recordsArray = allRecords.split("##");
+            String lastMonthKey = "";
+            int recordCount = 0;
+            int monthCount = 0;
+
+            for (String record : recordsArray) {
+                if (record == null || record.trim().isEmpty()) continue;
+
+                String[] detail = record.split("\\|");
+                if (detail.length >= 5) {
+                    String fullDate = detail[0];
+                    String[] dateInfo = getDateInfo(fullDate);
+
+                    String monthKey = dateInfo[0];
+                    String monthTitle = dateInfo[1];
+                    String dayText = dateInfo[2];
+
+                    if (!monthKey.equals(lastMonthKey)) {
+                        recordsContainer.addView(createMonthHeader(monthTitle));
+                        lastMonthKey = monthKey;
+                        monthCount++;
+                    }
+
+                    View itemView = inflater.inflate(R.layout.item_record, recordsContainer, false);
+
+                    ImageView ivEmoji = itemView.findViewById(R.id.ivItemEmoji);
+                    TextView tvDateTag = itemView.findViewById(R.id.tvItemDateTag);
+                    TextView tvDiary = itemView.findViewById(R.id.tvItemDiary);
+                    TextView tvMeta = itemView.findViewById(R.id.tvItemMeta);
+
+                    tvDateTag.setText(dayText);
+                    tvDiary.setText(detail[3].isEmpty() ? "작성된 일기 내용이 없습니다." : detail[3]);
+
+                    String score = detail.length > 2 ? detail[2] : "-";
+                    tvMeta.setText("점수 | " + score + "점");
+
+                    ivEmoji.setImageResource(getEmojiImage(detail[1]));
+
+                    String selectedRecord = record;
+                    itemView.setClickable(true);
+                    itemView.setFocusable(true);
+                    itemView.setOnClickListener(v -> {
+                        RecordDetailFragment fragment = new RecordDetailFragment();
+                        Bundle bundle = new Bundle();
+                        bundle.putString("record", selectedRecord);
+                        fragment.setArguments(bundle);
+
+                        requireActivity().getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.frameLayout, fragment)
+                                .addToBackStack(null)
+                                .commit();
+                    });
+
+                    recordsContainer.addView(itemView);
+                    recordCount++;
+                }
+            }
+
+            tvArchiveSummary.setText(monthCount + "개월 동안 " + recordCount + "개의 기록이 쌓였어요");
+        }
 
         return view;
-    }
-
-    private void loadRecordsFromFirestore(LayoutInflater inflater) {
-        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
-
-        // 💡 [5단계 격리 반영] 공용 보관함이 아닌 users/{uid}/daily_records 경로를 타깃팅하여 최신순으로 정렬합니다.
-        db.collection("users")
-                .document(uid)
-                .collection("daily_records")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (queryDocumentSnapshots.isEmpty()) {
-                        tvArchiveSummary.setText("아직 쌓인 기록이 없어요");
-                        recordsContainer.addView(createEmptyView());
-                        return;
-                    }
-
-                    String lastMonthKey = "";
-                    int recordCount = 0;
-                    int monthCount = 0;
-
-                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
-                        String fullDate = doc.getString("timestamp");
-                        if (fullDate == null) continue;
-
-                        String[] dateInfo = getDateInfo(fullDate);
-                        String monthKey = dateInfo[0];
-                        String monthTitle = dateInfo[1];
-                        String dayText = dateInfo[2];
-
-                        if (!monthKey.equals(lastMonthKey)) {
-                            recordsContainer.addView(createMonthHeader(monthTitle));
-                            lastMonthKey = monthKey;
-                            monthCount++;
-                        }
-
-                        View itemView = inflater.inflate(R.layout.item_record, recordsContainer, false);
-
-                        ImageView ivEmoji = itemView.findViewById(R.id.ivItemEmoji);
-                        TextView tvDateTag = itemView.findViewById(R.id.tvItemDateTag);
-                        TextView tvDiary = itemView.findViewById(R.id.tvItemDiary);
-                        TextView tvMeta = itemView.findViewById(R.id.tvItemMeta);
-
-                        tvDateTag.setText(dayText);
-                        String diary = doc.getString("diary");
-                        tvDiary.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
-
-                        Object scoreObj = doc.get("score");
-                        String score = (scoreObj != null) ? String.valueOf(scoreObj) : "-";
-                        tvMeta.setText("점수 | " + score + "점");
-
-                        String emotion = doc.getString("emotion");
-                        ivEmoji.setImageResource(getEmojiImage(emotion));
-
-                        itemView.setClickable(true);
-                        itemView.setFocusable(true);
-                        itemView.setOnClickListener(v -> {
-                            // 상세 화면으로 전달할 데이터를 생성 (기존 방식 호환을 위해 포맷팅)
-                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
-                                    fullDate,
-                                    emotion,
-                                    score,
-                                    diary,
-                                    doc.getString("meals"),
-                                    doc.getString("influence"),
-                                    doc.getString("stress"),
-                                    doc.getString("fatigue"),
-                                    doc.getString("sleep"),
-                                    doc.getString("need"),
-                                    doc.getString("feedback")
-                            );
-
-                            RecordDetailFragment fragment = new RecordDetailFragment();
-                            Bundle bundle = new Bundle();
-                            bundle.putString("record", formattedRecord);
-                            fragment.setArguments(bundle);
-
-                            requireActivity().getSupportFragmentManager().beginTransaction()
-                                    .replace(R.id.frameLayout, fragment)
-                                    .addToBackStack(null)
-                                    .commit();
-                        });
-
-                        recordsContainer.addView(itemView);
-                        recordCount++;
-                    }
-
-                    tvArchiveSummary.setText(monthCount + "개월 동안 " + recordCount + "개의 기록이 쌓였어요");
-                })
-                .addOnFailureListener(e -> {
-                    tvArchiveSummary.setText("기록을 불러오는 중 오류가 발생했습니다.");
-                    android.util.Log.e("ExtraFragment", "Error fetching records", e);
-                });
     }
 
     private View createMonthHeader(String monthTitle) {
