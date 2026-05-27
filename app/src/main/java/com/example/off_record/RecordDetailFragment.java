@@ -12,6 +12,7 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 
 
+
 public class RecordDetailFragment extends Fragment {
 
     private String record = "";

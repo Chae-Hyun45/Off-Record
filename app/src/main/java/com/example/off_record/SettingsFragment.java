@@ -32,6 +32,7 @@ import com.google.firebase.auth.FirebaseUser;
 import java.util.Calendar;
 import java.util.Locale;
 
+
 public class SettingsFragment extends Fragment {
 
     private SharedPreferences pref;

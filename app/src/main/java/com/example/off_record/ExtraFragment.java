@@ -18,6 +18,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import androidx.fragment.app.Fragment;
 
+
 public class ExtraFragment extends Fragment {
 
     private FirebaseFirestore db;
