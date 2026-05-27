@@ -12,7 +12,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.widget.ImageButton;
+import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
@@ -143,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         int[] emojiIds = {R.id.emo1, R.id.emo2, R.id.emo3, R.id.emo4, R.id.emo5};
 
         for (int id : emojiIds) {
-            ImageButton btn = dialog.findViewById(id);
+            View btn = dialog.findViewById(id);
             if (btn != null) {
                 btn.setOnClickListener(v -> {
                     dialog.dismiss();

@@ -286,7 +286,15 @@ public class InputFragment extends Fragment {
             ImageButton button = view.findViewById(resIds[i]);
 
             if (button != null) {
-                button.setBackgroundResource(selectedEmotion.equals(codes[i]) ? R.drawable.circle_bg : 0);
+                boolean isSelected = selectedEmotion.equals(codes[i]);
+
+                // 선택된 이모지는 은은한 연두 배경 + 얇은 테두리
+                button.setBackgroundResource(isSelected ? R.drawable.emoji_selected_bg : android.R.color.transparent);
+
+                // 선택된 이모지는 조금만 더 선명하고 크게
+                button.setAlpha(isSelected ? 1.0f : 0.68f);
+                button.setScaleX(isSelected ? 1.06f : 1.0f);
+                button.setScaleY(isSelected ? 1.06f : 1.0f);
             }
         }
     }
