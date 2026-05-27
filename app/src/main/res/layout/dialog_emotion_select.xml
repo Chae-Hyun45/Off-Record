@@ -21,14 +21,14 @@
         android:orientation="horizontal">
 
         <ImageButton android:id="@+id/emo1" android:layout_width="60dp" android:layout_height="60dp"
-            android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter"/>
+            android:src="@drawable/one" android:background="@android:color/transparent" android:scaleType="fitCenter"/>
         <ImageButton android:id="@+id/emo2" android:layout_width="60dp" android:layout_height="60dp"
-            android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter"/>
+            android:src="@drawable/two" android:background="@android:color/transparent" android:scaleType="fitCenter"/>
         <ImageButton android:id="@+id/emo3" android:layout_width="60dp" android:layout_height="60dp"
-            android:src="@drawable/three" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter"/>
+            android:src="@drawable/three" android:background="@android:color/transparent" android:scaleType="fitCenter"/>
         <ImageButton android:id="@+id/emo4" android:layout_width="60dp" android:layout_height="60dp"
-            android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter"/>
+            android:src="@drawable/four" android:background="@android:color/transparent" android:scaleType="fitCenter"/>
         <ImageButton android:id="@+id/emo5" android:layout_width="60dp" android:layout_height="60dp"
-            android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter"/>
+            android:src="@drawable/five" android:background="@android:color/transparent" android:scaleType="fitCenter"/>
     </LinearLayout>
 </LinearLayout>
