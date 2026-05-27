@@ -68,6 +68,7 @@ public class SettingsFragment extends Fragment {
         View itemNotificationTime = view.findViewById(R.id.itemNotificationTime);
         View itemLifeData = view.findViewById(R.id.itemLifeData);
         View itemVoicePolicy = view.findViewById(R.id.itemVoicePolicy);
+        View cardTotalDays = view.findViewById(R.id.cardTotalDays);
         View cardStatsReport = view.findViewById(R.id.cardStatsReport);
 
         updateStats();
@@ -113,6 +114,14 @@ public class SettingsFragment extends Fragment {
 
         if (itemNotificationTime != null) {
             itemNotificationTime.setOnClickListener(v -> checkPermissionAndShowPicker());
+        }
+
+        if (cardTotalDays != null) {
+            cardTotalDays.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).bottomNav.setSelectedItemId(R.id.extra);
+                }
+            });
         }
 
         if (cardStatsReport != null) {
