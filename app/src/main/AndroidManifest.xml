@@ -10,6 +10,11 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!-- 💡 [여기에 한 줄 추가되었습니다!] 팀장님 요구사항 해결용 패키지명 ➡️ 앱 이름 변환 권한 -->
+    <uses-permission
+        android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+
     <queries>
         <package android:name="com.google.android.gms" />
     </queries>
