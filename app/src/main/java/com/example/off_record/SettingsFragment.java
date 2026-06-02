@@ -38,8 +38,9 @@ public class SettingsFragment extends Fragment {
     private TextView tvTotalDays;
     private TextView tvAlarmTime;
     private SwitchCompat switchAlarm;
-    private FirebaseAuth mAuth; // 💡 파이어베이스 인증 객체 추가
+    private FirebaseAuth mAuth;
     private TextView tvAccountName;
+    private TextView tvLifeDataStatus;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
@@ -55,7 +56,7 @@ public class SettingsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
-        mAuth = FirebaseAuth.getInstance(); // 💡 초기화
+        mAuth = FirebaseAuth.getInstance();
         pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
 
         tvTotalDays = view.findViewById(R.id.tvTotalDays);
@@ -64,6 +65,7 @@ public class SettingsFragment extends Fragment {
         Button btnLogin = view.findViewById(R.id.btnLogin);
         TextView tvLogout = view.findViewById(R.id.tvLogout);
         tvAccountName = view.findViewById(R.id.tvAccountName);
+        tvLifeDataStatus = view.findViewById(R.id.tvLifeDataStatus);
 
         View itemNotificationTime = view.findViewById(R.id.itemNotificationTime);
         View itemLifeData = view.findViewById(R.id.itemLifeData);
@@ -73,15 +75,12 @@ public class SettingsFragment extends Fragment {
 
         updateStats();
 
-        // 💡 [정원님 추가] 로그인 상태에 따른 UI 분기 처리
-        //  [교체할 코드 구역]
+        // 로그인 상태에 따른 UI 분기 처리 및 닉네임 변환
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
-            // 🔓 로그인된 상태라면? 로그인 버튼 숨기고 로그아웃 글씨 보여주기
             if (btnLogin != null) btnLogin.setVisibility(View.GONE);
             if (tvLogout != null) tvLogout.setVisibility(View.VISIBLE);
 
-            // 💡 [팀장님 요구사항] 이메일을 확인해서 테스트 유저라면 사용자 닉네임으로 뿅 바꿔줍니다!
             String email = currentUser.getEmail();
             if (tvAccountName != null && email != null) {
                 if (email.contains("test1")) {
@@ -89,17 +88,21 @@ public class SettingsFragment extends Fragment {
                 } else if (email.contains("test2")) {
                     tvAccountName.setText("사용자 2 🌟");
                 } else {
-                    tvAccountName.setText(email); // 일반 가입 유저는 이메일 그대로 노출
+                    tvAccountName.setText(email);
                 }
             }
-        }
-        else {
-            // 🔒 로그아웃된 상태라면? 로그인 버튼 보여주고 로그아웃 글씨 숨기기
+        } else {
             if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
             if (tvLogout != null) tvLogout.setVisibility(View.GONE);
 
-            // 💡 [이것도 필수!] 로그아웃되면 다시 원래대로 "게스트 ⚠️"로 돌려놓기
             if (tvAccountName != null) tvAccountName.setText("게스트 ⚠️");
+        }
+
+        // 처음 설정 화면에 진입했을 때, 이미 권한이 켜져 있다면 "연동됨"으로 보여주기
+        if (checkUsageStatsPermission()) {
+            if (tvLifeDataStatus != null) tvLifeDataStatus.setText("연동됨");
+        } else {
+            if (tvLifeDataStatus != null) tvLifeDataStatus.setText("미연동");
         }
 
         boolean isAlarmOn = pref.getBoolean("alarm_on", true);
@@ -143,7 +146,6 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        // 💡 로그인 버튼 누르면 로그인 화면으로 전환
         if (btnLogin != null) {
             btnLogin.setOnClickListener(v -> {
                 getParentFragmentManager().beginTransaction()
@@ -153,20 +155,66 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        // 💡 [정원님 추가] 로그아웃 버튼 누르면 진짜 파이어베이스 로그아웃 처리
         if (tvLogout != null) {
             tvLogout.setOnClickListener(v -> {
-                mAuth.signOut(); // 🚀 서버 로그아웃
+                mAuth.signOut();
                 Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
 
-                // 설정 화면 새로고침 (바뀐 UI 반영)
                 getParentFragmentManager().beginTransaction()
                         .replace(R.id.frameLayout, new SettingsFragment())
                         .commit();
             });
         }
 
-        if (itemLifeData != null) itemLifeData.setOnClickListener(v -> Toast.makeText(getContext(), "생활 데이터 연동 설정으로 이동합니다.", Toast.LENGTH_SHORT).show());
+        // 생활 데이터 연동 버튼 클릭 시 액션
+        if (itemLifeData != null) {
+            itemLifeData.setOnClickListener(v -> {
+                if (checkUsageStatsPermission()) {
+                    if (tvLifeDataStatus != null) tvLifeDataStatus.setText("연동됨");
+
+                    java.util.Map<String, Object> topApps = getTop3AppUsage();
+                    if (!topApps.isEmpty()) {
+
+                        StringBuilder msgBuilder = new StringBuilder();
+
+                        // 💡 [UI 추가] 대화 상자 상단에 오늘 총 휴대폰 사용 시간 출력
+                        long totalHours = topApps.containsKey("total_hours") ? (long) topApps.get("total_hours") : 0L;
+                        long totalMinutes = topApps.containsKey("total_minutes") ? (long) topApps.get("total_minutes") : 0L;
+
+                        msgBuilder.append("📱 오늘 총 휴대폰 사용 시간:\n");
+                        if (totalHours > 0) {
+                            msgBuilder.append(totalHours).append("시간 ");
+                        }
+                        msgBuilder.append(totalMinutes).append("분\n\n");
+                        msgBuilder.append("-----------------------------\n\n");
+                        msgBuilder.append("[앱별 사용량 순위]\n");
+
+                        if (topApps.containsKey("app1_name")) {
+                            msgBuilder.append("• 1위 : ").append(topApps.get("app1_name")).append(" (").append(topApps.get("app1_time")).append("분)\n");
+                        }
+                        if (topApps.containsKey("app2_name")) {
+                            msgBuilder.append("• 2위 : ").append(topApps.get("app2_name")).append(" (").append(topApps.get("app2_time")).append("분)\n");
+                        }
+                        if (topApps.containsKey("app3_name")) {
+                            msgBuilder.append("• 3위 : ").append(topApps.get("app3_name")).append(" (").append(topApps.get("app3_time")).append("분)");
+                        }
+
+                        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                                .setTitle("📊 오늘 스마트폰 사용 통계 리포트")
+                                .setMessage(msgBuilder.toString().trim())
+                                .setPositiveButton("확인", null)
+                                .create()
+                                .show();
+
+                    } else {
+                        Toast.makeText(getContext(), "오늘 한국 시간 00:00 이후 수집된 스마트폰 사용 데이터가 아직 없습니다!", Toast.LENGTH_LONG).show();
+                    }
+                } else {
+                    requestUsageStatsPermission();
+                }
+            });
+        }
+
         if (itemVoicePolicy != null) itemVoicePolicy.setOnClickListener(v -> showVoicePolicyDialog());
 
         return view;
@@ -315,5 +363,114 @@ public class SettingsFragment extends Fragment {
         builder.setMessage("사용자의 음성 기록은 AI 분석 직후 텍스트로만 보관되며, 원본 음성 파일은 보안을 위해 기기에서 즉시 자동 삭제됩니다.");
         builder.setPositiveButton("확인", null);
         builder.show();
+    }
+
+    // ================= 💡 생활 데이터 수집을 위한 고도화 메서드들 =================
+
+    private boolean checkUsageStatsPermission() {
+        android.app.AppOpsManager appOps = (android.app.AppOpsManager) requireContext().getSystemService(Context.APP_OPS_SERVICE);
+        int mode = appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                android.os.Process.myUid(), requireContext().getPackageName());
+        return mode == android.app.AppOpsManager.MODE_ALLOWED;
+    }
+
+    private void requestUsageStatsPermission() {
+        Toast.makeText(getContext(), "AI 분석 기능을 위해 스마트폰 사용 정보 접근 권한 승인이 필요합니다.", Toast.LENGTH_LONG).show();
+        Intent intent = new Intent(android.provider.Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        startActivity(intent);
+    }
+
+    private java.util.Map<String, Object> getTop3AppUsage() {
+        java.util.Map<String, Object> topAppsResult = new java.util.HashMap<>();
+        android.app.usage.UsageStatsManager usageStatsManager = (android.app.usage.UsageStatsManager) requireContext().getSystemService(Context.USAGE_STATS_SERVICE);
+        android.content.pm.PackageManager packageManager = requireContext().getPackageManager();
+
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0);
+        calendar.set(Calendar.MINUTE, 0);
+        calendar.set(Calendar.SECOND, 0);
+        calendar.set(Calendar.MILLISECOND, 0);
+        long startTime = calendar.getTimeInMillis();
+        long endTime = System.currentTimeMillis();
+
+        android.app.usage.UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
+
+        java.util.Map<String, Long> appUsageMap = new java.util.HashMap<>();
+        java.util.Map<String, Long> openTimeMap = new java.util.HashMap<>();
+
+        android.app.usage.UsageEvents.Event event = new android.app.usage.UsageEvents.Event();
+        while (usageEvents.hasNextEvent()) {
+            usageEvents.getNextEvent(event);
+            String pkg = event.getPackageName();
+
+            if (pkg.contains("launcher") || pkg.equals(requireContext().getPackageName()) || pkg.contains("systemui")) {
+                continue;
+            }
+
+            int eventType = event.getEventType();
+            long eventTime = event.getTimeStamp();
+
+            if (eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                openTimeMap.put(pkg, eventTime);
+            }
+            else if (eventType == android.app.usage.UsageEvents.Event.ACTIVITY_PAUSED) {
+                if (openTimeMap.containsKey(pkg)) {
+                    long openTime = openTimeMap.remove(pkg);
+                    long duration = eventTime - openTime;
+                    if (duration > 0) {
+                        appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
+                    }
+                }
+            }
+        }
+
+        for (String pkg : openTimeMap.keySet()) {
+            long openTime = openTimeMap.get(pkg);
+            long duration = endTime - openTime;
+            if (duration > 0) {
+                appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
+            }
+        }
+
+        // 💡 [로직 추가] 수집된 모든 실사용 앱들의 밀리초 합산하여 총 사용 시간 계산
+        long totalMillis = 0;
+        for (long duration : appUsageMap.values()) {
+            totalMillis += duration;
+        }
+        long totalTotalMinutes = totalMillis / (1000 * 60);
+        long totalHours = totalTotalMinutes / 60;
+        long remainingMinutes = totalTotalMinutes % 60;
+
+        // 결과 지도(Map)에 총 사용 시간 메타데이터 바인딩
+        topAppsResult.put("total_hours", totalHours);
+        topAppsResult.put("total_minutes", remainingMinutes);
+
+        // 사용 시간순 내림차순 정렬
+        java.util.List<java.util.Map.Entry<String, Long>> sortedList = new java.util.ArrayList<>(appUsageMap.entrySet());
+        sortedList.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
+
+        int rank = 1;
+        for (java.util.Map.Entry<String, Long> entry : sortedList) {
+            if (rank > 3) break;
+
+            String packageName = entry.getKey();
+            long minutes = entry.getValue() / (1000 * 60);
+
+            if (minutes == 0) continue;
+
+            String appLabel = packageName;
+            try {
+                android.content.pm.ApplicationInfo appInfo = packageManager.getApplicationInfo(packageName, 0);
+                appLabel = packageManager.getApplicationLabel(appInfo).toString();
+            } catch (android.content.pm.PackageManager.NameNotFoundException e) {
+                // 패키지명 유지
+            }
+
+            topAppsResult.put("app" + rank + "_name", appLabel);
+            topAppsResult.put("app" + rank + "_time", minutes);
+            rank++;
+        }
+
+        return topAppsResult;
     }
 }
