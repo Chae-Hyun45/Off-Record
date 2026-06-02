@@ -1,86 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp"
-    android:background="#F8FAFC">
-
-    <RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="32dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="📊 스마트폰 사용 리포트"
-            android:textSize="22sp"
-            android:textStyle="bold"
-            android:textColor="#1E293B"/>
-    </RelativeLayout>
+    android:background="#F8FAFC"
+    android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:padding="20dp"
-        android:layout_marginBottom="24dp"
-        android:elevation="2dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="오늘 총 사용 시간"
-            android:textSize="14sp"
-            android:textColor="#64748B"
-            android:layout_marginBottom="8dp"/>
-        <TextView
-            android:id="@+id/tvTotalTimeResult"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="0분"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="#4F46E5"/>
-    </LinearLayout>
+        android:padding="24dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:background="#FFFFFF"
-        android:padding="20dp"
-        android:elevation="2dp">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="🔥 가장 많이 쓴 앱 상위 3개"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:textColor="#1E293B"
-            android:layout_marginBottom="16dp"/>
-        <TextView
-            android:id="@+id/tvRank1"
+        <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="• 1위 : 데이터 없음"
-            android:textSize="15sp"
-            android:textColor="#334155"
-            android:layout_marginBottom="12dp"/>
-        <TextView
-            android:id="@+id/tvRank2"
+            android:layout_marginBottom="32dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📊 스마트폰 사용 리포트"
+                android:textSize="22sp"
+                android:textStyle="bold"
+                android:textColor="#1E293B"/>
+        </RelativeLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="• 2위 : 데이터 없음"
-            android:textSize="15sp"
-            android:textColor="#334155"
-            android:layout_marginBottom="12dp"/>
-        <TextView
-            android:id="@+id/tvRank3"
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="20dp"
+            android:layout_marginBottom="24dp"
+            android:elevation="2dp">
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="오늘 순수 화면 켠 시간 (스크린 타임)"
+                android:textSize="14sp"
+                android:textColor="#64748B"
+                android:layout_marginBottom="8dp"/>
+            <TextView
+                android:id="@+id/tvTotalTimeResult"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0분"
+                android:textSize="28sp"
+                android:textStyle="bold"
+                android:textColor="#4F46E5"/>
+        </LinearLayout>
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="• 3위 : 데이터 없음"
-            android:textSize="15sp"
-            android:textColor="#334155"/>
+            android:orientation="vertical"
+            android:background="#FFFFFF"
+            android:padding="20dp"
+            android:elevation="2dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📱 오늘 사용한 앱 목록"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:textColor="#1E293B"
+                android:layout_marginBottom="16dp"/>
+
+            <LinearLayout
+                android:id="@+id/llAppList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+</ScrollView>
