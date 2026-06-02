@@ -167,48 +167,16 @@ public class SettingsFragment extends Fragment {
         }
 
         // 생활 데이터 연동 버튼 클릭 시 액션
+        // 🚀 [수정 완료] 팀장님이 원하신 정식 '새 화면(Fragment)' 트랜지션 실행!
         if (itemLifeData != null) {
             itemLifeData.setOnClickListener(v -> {
                 if (checkUsageStatsPermission()) {
                     if (tvLifeDataStatus != null) tvLifeDataStatus.setText("연동됨");
 
-                    java.util.Map<String, Object> topApps = getTop3AppUsage();
-                    if (!topApps.isEmpty()) {
-
-                        StringBuilder msgBuilder = new StringBuilder();
-
-                        // 💡 [UI 추가] 대화 상자 상단에 오늘 총 휴대폰 사용 시간 출력
-                        long totalHours = topApps.containsKey("total_hours") ? (long) topApps.get("total_hours") : 0L;
-                        long totalMinutes = topApps.containsKey("total_minutes") ? (long) topApps.get("total_minutes") : 0L;
-
-                        msgBuilder.append("📱 오늘 총 휴대폰 사용 시간:\n");
-                        if (totalHours > 0) {
-                            msgBuilder.append(totalHours).append("시간 ");
-                        }
-                        msgBuilder.append(totalMinutes).append("분\n\n");
-                        msgBuilder.append("-----------------------------\n\n");
-                        msgBuilder.append("[앱별 사용량 순위]\n");
-
-                        if (topApps.containsKey("app1_name")) {
-                            msgBuilder.append("• 1위 : ").append(topApps.get("app1_name")).append(" (").append(topApps.get("app1_time")).append("분)\n");
-                        }
-                        if (topApps.containsKey("app2_name")) {
-                            msgBuilder.append("• 2위 : ").append(topApps.get("app2_name")).append(" (").append(topApps.get("app2_time")).append("분)\n");
-                        }
-                        if (topApps.containsKey("app3_name")) {
-                            msgBuilder.append("• 3위 : ").append(topApps.get("app3_name")).append(" (").append(topApps.get("app3_time")).append("분)");
-                        }
-
-                        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                                .setTitle("📊 오늘 스마트폰 사용 통계 리포트")
-                                .setMessage(msgBuilder.toString().trim())
-                                .setPositiveButton("확인", null)
-                                .create()
-                                .show();
-
-                    } else {
-                        Toast.makeText(getContext(), "오늘 한국 시간 00:00 이후 수집된 스마트폰 사용 데이터가 아직 없습니다!", Toast.LENGTH_LONG).show();
-                    }
+                    getParentFragmentManager().beginTransaction()
+                            .replace(R.id.frameLayout, new UsageStatsFragment())
+                            .addToBackStack(null) // 스마트폰 뒤로 가기 버튼 대응
+                            .commit();
                 } else {
                     requestUsageStatsPermission();
                 }
