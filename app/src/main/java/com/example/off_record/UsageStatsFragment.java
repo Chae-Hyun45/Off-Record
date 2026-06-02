@@ -23,7 +23,7 @@ import java.util.Map;
 public class UsageStatsFragment extends Fragment {
 
     private TextView tvTotalTimeResult;
-    private LinearLayout llAppList; // 💡 동적으로 앱 목록을 추가할 컨테이너 바인딩
+    private LinearLayout llAppList;
 
     private static class AppInterval {
         long start;
@@ -40,14 +40,13 @@ public class UsageStatsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_usage_stats, container, false);
 
         tvTotalTimeResult = view.findViewById(R.id.tvTotalTimeResult);
-        llAppList = view.findViewById(R.id.llAppList); // XML과 매핑
+        llAppList = view.findViewById(R.id.llAppList);
 
         displayUsageReport();
         return view;
     }
 
     private void displayUsageReport() {
-        // 기존에 수집된 뷰가 있다면 초기화 시켜 중복 방지
         if (llAppList != null) llAppList.removeAllViews();
 
         UsageStatsManager usageStatsManager = (UsageStatsManager) requireContext().getSystemService(Context.USAGE_STATS_SERVICE);
@@ -62,9 +61,13 @@ public class UsageStatsFragment extends Fragment {
         long endTime = System.currentTimeMillis();
 
         UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
+
         Map<String, Long> appUsageMap = new HashMap<>();
-        Map<String, Long> openTimeMap = new HashMap<>();
         List<AppInterval> intervalList = new ArrayList<>();
+
+        // 💡 실시간 상태 전환 추적을 위한 변수
+        String currentActiveApp = null;
+        long currentAppStartTime = 0;
 
         UsageEvents.Event event = new UsageEvents.Event();
         while (usageEvents.hasNextEvent()) {
@@ -76,29 +79,40 @@ public class UsageStatsFragment extends Fragment {
             long eventTime = event.getTimeStamp();
 
             if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                openTimeMap.put(pkg, eventTime);
-            } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                if (openTimeMap.containsKey(pkg)) {
-                    long openTime = openTimeMap.remove(pkg);
-                    long duration = eventTime - openTime;
+                // 💡 [채현님 버그 해결] 새로운 앱이 켜졌는데 기존 앱이 PAUSED 로그를 누락했다면, 새 앱이 켜진 시점에 강제 종료 정산
+                if (currentActiveApp != null && !currentActiveApp.equals(pkg)) {
+                    long duration = eventTime - currentAppStartTime;
                     if (duration > 0) {
-                        appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
-                        intervalList.add(new AppInterval(openTime, eventTime));
+                        appUsageMap.put(currentActiveApp, appUsageMap.getOrDefault(currentActiveApp, 0L) + duration);
+                        intervalList.add(new AppInterval(currentAppStartTime, eventTime));
                     }
+                }
+                currentActiveApp = pkg;
+                currentAppStartTime = eventTime;
+            }
+            else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
+                // 정상적으로 앱이 닫힌 경우 정산
+                if (currentActiveApp != null && currentActiveApp.equals(pkg)) {
+                    long duration = eventTime - currentAppStartTime;
+                    if (duration > 0) {
+                        appUsageMap.put(currentActiveApp, appUsageMap.getOrDefault(currentActiveApp, 0L) + duration);
+                        intervalList.add(new AppInterval(currentAppStartTime, eventTime));
+                    }
+                    currentActiveApp = null;
                 }
             }
         }
 
-        for (String pkg : openTimeMap.keySet()) {
-            long openTime = openTimeMap.get(pkg);
-            long duration = endTime - openTime;
+        // 현재 마지막으로 켜져 있는 앱 마저 정산
+        if (currentActiveApp != null) {
+            long duration = endTime - currentAppStartTime;
             if (duration > 0) {
-                appUsageMap.put(pkg, appUsageMap.getOrDefault(pkg, 0L) + duration);
-                intervalList.add(new AppInterval(openTime, endTime));
+                appUsageMap.put(currentActiveApp, appUsageMap.getOrDefault(currentActiveApp, 0L) + duration);
+                intervalList.add(new AppInterval(currentAppStartTime, endTime));
             }
         }
 
-        // 1. 순수 총 스크린 타임 정산 및 출력
+        // 1. 순수 총 스크린 타임 계산 및 출력 (오늘 하루 치만 정확히 계산됨)
         long totalMillis = calculatePureScreenOnTime(intervalList);
         long totalTotalMinutes = totalMillis / (1000 * 60);
         long totalHours = totalTotalMinutes / 60;
@@ -109,16 +123,16 @@ public class UsageStatsFragment extends Fragment {
         totalText += remainingMinutes + "분";
         if (tvTotalTimeResult != null) tvTotalTimeResult.setText(totalText);
 
-        // 2. 사용량 순 정렬
+        // 2. 오늘 사용량 순 정렬
         List<Map.Entry<String, Long>> sortedList = new ArrayList<>(appUsageMap.entrySet());
         sortedList.sort((o1, o2) -> o2.getValue().compareTo(o1.getValue()));
 
-        // 3. 💡 [무제한 출력 고도화] 루프 돌면서 오늘 사용한 모든 앱을 레이아웃에 동적 추가
+        // 3. 무제한 리스트 출력
         int rank = 1;
         for (Map.Entry<String, Long> entry : sortedList) {
             String packageName = entry.getKey();
             long minutes = entry.getValue() / (1000 * 60);
-            if (minutes == 0) continue; // 1분 미만 사용 앱은 스킵
+            if (minutes == 0) continue; // 1분 미만 사용 앱 출력 제외
 
             String appLabel = packageName;
             try {
@@ -126,26 +140,20 @@ public class UsageStatsFragment extends Fragment {
                 appLabel = packageManager.getApplicationLabel(appInfo).toString();
             } catch (PackageManager.NameNotFoundException e) {}
 
-            // 🚀 자바 코드로 실시간 텍스트뷰를 디자인해서 리스트 박스에 쏙 끼워 넣음
             TextView tvAppItem = new TextView(getContext());
-            String itemText = rank + "위 : " + appLabel + " (" + minutes + "분)";
-            tvAppItem.setText(itemText);
+            tvAppItem.setText(rank + "위 : " + appLabel + " (" + minutes + "분)");
             tvAppItem.setTextSize(15);
-            tvAppItem.setTextColor(0xFF334155); // #334155 색상 코드
+            tvAppItem.setTextColor(0xFF334155);
 
-            // 아래위 여백 살짝 주기
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, 0, 32); // 아래쪽에 12dp 정도의 여백 주기
+            params.setMargins(0, 0, 0, 32);
             tvAppItem.setLayoutParams(params);
 
-            if (llAppList != null) {
-                llAppList.addView(tvAppItem);
-            }
+            if (llAppList != null) llAppList.addView(tvAppItem);
             rank++;
         }
 
-        // 만약 오늘 아무 앱도 안 썼다면 안내 문구 출력
         if (rank == 1 && llAppList != null) {
             TextView tvEmpty = new TextView(getContext());
             tvEmpty.setText("오늘 사용한 앱 데이터가 존재하지 않습니다.");
