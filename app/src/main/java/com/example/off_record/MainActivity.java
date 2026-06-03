@@ -113,16 +113,13 @@ public class MainActivity extends AppCompatActivity {
                 btn.setOnClickListener(v -> {
                     dialog.dismiss();
 
-                    // 4. 선택한 감정의 ID 정보를 Bundle에 담아서 InputFragment로 전달
                     InputFragment fragment = new InputFragment();
                     Bundle bundle = new Bundle();
 
-                    // 클릭된 버튼의 Resource ID 이름을 문자열로 보냄 (예: "emo1")
                     String emotionKey = getResources().getResourceEntryName(id);
                     bundle.putString("selected_emotion", emotionKey);
                     fragment.setArguments(bundle);
 
-                    // 화면 전환
                     getSupportFragmentManager().beginTransaction()
                             .replace(R.id.frameLayout, fragment)
                             .commit();

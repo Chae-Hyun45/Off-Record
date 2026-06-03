@@ -80,25 +80,18 @@ public class StatsFragment extends Fragment {
         currentUid = (currentUser != null) ? currentUser.getUid() : null;
         isGuestMode = (currentUid == null);
 
-        // 1. 차트 기본 레이아웃 셋팅
         setupLineChart();
         setupToggleButtons();
 
         if (isGuestMode) {
-            // 게스트는 DB 누적 통계는 없지만, 오늘 임시 기록이 있으면 오늘 데이터만 통계 화면에 표시합니다.
             loadGuestDiaryData();
         } else {
-            // 파이어베이스 데이터 로드 및 연동
             loadDiaryDataFromServer();
         }
 
         return view;
     }
 
-    /**
-     * 게스트는 Firestore에 저장하지 않고 오늘 기록만 로컬에 임시 저장합니다.
-     * 오늘 임시 기록이 있으면 통계 화면에 오늘 데이터 1개만 보여주고, 날짜가 바뀌면 빈 상태가 됩니다.
-     */
     private void showEmptyGuestStats() {
         diaryDatesSet.clear();
         diaryMoodMap.clear();
@@ -117,9 +110,6 @@ public class StatsFragment extends Fragment {
         updateChartByPeriod("1주");
     }
 
-    /**
-     * 1. 선그래프의 좌우 치우침을 완벽하게 잡아주는 여백 강제 정렬 정의
-     */
     private void setupLineChart() {
         lineChart.getDescription().setEnabled(false);
         lineChart.setDrawGridBackground(false);
@@ -137,14 +127,12 @@ public class StatsFragment extends Fragment {
         leftAxis.setTextColor(Color.TRANSPARENT); // 수치 숫자는 투명하게 숨기기
         leftAxis.setDrawAxisLine(false);          // 축선 숨겨서 깔끔하게
 
-        // X축(바닥 글자축) 디자인 정의
         XAxis xAxis = lineChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
         xAxis.setDrawGridLines(false);
         xAxis.setTextSize(11f);
         xAxis.setGranularity(1f);
 
-        // 커스텀 이모지 Y축 렌더러 등록
         EmojiYAxisRenderer emojiRenderer = new EmojiYAxisRenderer(
                 lineChart.getViewPortHandler(),
                 leftAxis,
@@ -156,9 +144,6 @@ public class StatsFragment extends Fragment {
         lineChart.animateX(800);
     }
 
-    /**
-     * 2. Y축 정수 높이선선 좌측에 맞춰 one~five 이모지 비트맵 이미지를 그리는 커스텀 렌더러
-     */
     private class EmojiYAxisRenderer extends YAxisRenderer {
         private Bitmap[] emojiBitmaps = new Bitmap[5];
         private int emojiSize = 65; // 이모지 이미지 크기
@@ -200,9 +185,6 @@ public class StatsFragment extends Fragment {
         }
     }
 
-    /**
-     * 3. 기간 선택 토글 버튼 이벤트 관리
-     */
     private void setupToggleButtons() {
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
@@ -217,9 +199,6 @@ public class StatsFragment extends Fragment {
         });
     }
 
-    /**
-     * 4. 주/월/년 선택 시 X축 글자 포맷팅 및 데이터 정렬 연동
-     */
     private void updateChartByPeriod(String period) {
         List<Entry> entries = new ArrayList<>();
         XAxis xAxis = lineChart.getXAxis();
@@ -319,7 +298,6 @@ public class StatsFragment extends Fragment {
         dataSet.setDrawCircleHole(true);
         dataSet.setValueTextSize(11f);
         dataSet.setValueTextColor(Color.BLACK);
-        // 실제 기록만 선으로 연결합니다. CUBIC_BEZIER는 같은 점수 사이에서도 곡선이 과하게 꺾여 보일 수 있어 LINEAR로 고정합니다.
         dataSet.setMode(LineDataSet.Mode.LINEAR);
 
         LineData lineData = new LineData(dataSet);
@@ -327,9 +305,6 @@ public class StatsFragment extends Fragment {
         lineChart.invalidate();
     }
 
-    /**
-     * 5. 파이어베이스 데이터 조회 (💡 5단계 독립 서랍 격리 및 데이터 규격 매핑 적용)
-     */
     private void loadDiaryDataFromServer() {
         if (currentUid == null) {
             loadGuestDiaryData();
@@ -346,10 +321,8 @@ public class StatsFragment extends Fragment {
                         diaryMoodMap.clear();
 
                         for (QueryDocumentSnapshot document : task.getResult()) {
-                            // 💡 새 구조에서는 문서 고유의 ID 자체가 날짜 Key값(yyyy-MM-dd)입니다!
                             String dateStr = document.getId();
 
-                            // 💡 문자열 코드형 감정 데이터("emo1"~"emo5")를 그래프 소수점 점수(1.0f~5.0f)로 매핑합니다.
                             String emotion = document.getString("emotion");
                             float moodScore = emotionToMoodScore(emotion);
 
@@ -395,9 +368,6 @@ public class StatsFragment extends Fragment {
         }
     }
 
-    /**
-     * 6. 연속 일기 작성 스트릭(Streak) 추적 로직
-     */
     private void calculateDiaryStreak() {
         if (diaryDatesSet.isEmpty()) {
             tvStreakMessage.setText("아직 작성된 일기가 없습니다. 첫 일기를 쓰고 기분을 기록해 보세요! ✍️");
