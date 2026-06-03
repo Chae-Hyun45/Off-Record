@@ -72,41 +72,30 @@ public class InputFragment extends Fragment {
 
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
 
-        // 💡 [5단계 격리 반영] 공용 보관함이 아닌, users/{uid}/daily_records 경로에서 오늘의 기록을 로드합니다.
-        db.collection("users").document(uid).collection("daily_records").document(today).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc.exists()) {
-                        if (selectedEmotion.isEmpty()) selectedEmotion = doc.getString("emotion");
-                        updateEmotionHighlight(view);
-
-                        Long scoreLong = doc.getLong("score");
-                        int score = (scoreLong != null) ? scoreLong.intValue() : 0;
-                        seekBar.setProgress(score);
-                        tvScoreValue.setText(score + "점");
-                        etDiary.setText(doc.getString("diary"));
-
-                        String meals = doc.getString("meals");
-                        if (meals != null) {
-                            cbBreakfast.setChecked(meals.contains("아침"));
-                            cbLunch.setChecked(meals.contains("점심"));
-                            cbDinner.setChecked(meals.contains("저녁"));
-                            cbLateNight.setChecked(meals.contains("야식"));
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+            if (guestRecord != null) {
+                applyRecordToInputView(view, guestRecord, seekBar, tvScoreValue, etDiary,
+                        cbBreakfast, cbLunch, cbDinner, cbLateNight);
+            } else {
+                updateEmotionHighlight(view);
+            }
+        } else {
+            String uid = currentUser.getUid();
+            db.collection("users").document(uid).collection("daily_records").document(today).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            Map<String, Object> savedRecord = new HashMap<>(doc.getData());
+                            applyRecordToInputView(view, savedRecord, seekBar, tvScoreValue, etDiary,
+                                    cbBreakfast, cbLunch, cbDinner, cbLateNight);
+                        } else {
+                            updateEmotionHighlight(view);
                         }
-
-                        setRadioCheckedByText(rgInfluence, doc.getString("influence"));
-                        setRadioCheckedByText(rgStress, doc.getString("stress"));
-                        setRadioCheckedByText(rgFatigue, doc.getString("fatigue"));
-                        setRadioCheckedByText(rgSleep, doc.getString("sleep"));
-                        setRadioCheckedByText(rgNeed, doc.getString("need"));
-                        setRadioCheckedByText(rgFeedback, doc.getString("feedback"));
-                    } else {
-                        updateEmotionHighlight(view);
-                    }
-                });
+                    });
+        }
 
         if (btnComplete != null) {
             btnComplete.setOnClickListener(v -> {
@@ -131,6 +120,51 @@ public class InputFragment extends Fragment {
         return view;
     }
 
+    private void applyRecordToInputView(View view, Map<String, Object> record, SeekBar seekBar, TextView tvScoreValue,
+                                        EditText etDiary, CheckBox cbBreakfast, CheckBox cbLunch,
+                                        CheckBox cbDinner, CheckBox cbLateNight) {
+        if (record == null) {
+            updateEmotionHighlight(view);
+            return;
+        }
+
+        if (selectedEmotion.isEmpty()) selectedEmotion = stringFromRecord(record, "emotion");
+        updateEmotionHighlight(view);
+
+        int score = intFromRecord(record, "score");
+        seekBar.setProgress(score);
+        tvScoreValue.setText(score + "점");
+        etDiary.setText(stringFromRecord(record, "diary"));
+
+        String meals = stringFromRecord(record, "meals");
+        cbBreakfast.setChecked(meals.contains("아침"));
+        cbLunch.setChecked(meals.contains("점심"));
+        cbDinner.setChecked(meals.contains("저녁"));
+        cbLateNight.setChecked(meals.contains("야식"));
+
+        setRadioCheckedByText(rgInfluence, stringFromRecord(record, "influence"));
+        setRadioCheckedByText(rgStress, stringFromRecord(record, "stress"));
+        setRadioCheckedByText(rgFatigue, stringFromRecord(record, "fatigue"));
+        setRadioCheckedByText(rgSleep, stringFromRecord(record, "sleep"));
+        setRadioCheckedByText(rgNeed, stringFromRecord(record, "need"));
+        setRadioCheckedByText(rgFeedback, stringFromRecord(record, "feedback"));
+    }
+
+    private String stringFromRecord(Map<String, Object> record, String key) {
+        Object value = record.get(key);
+        return value == null ? "" : String.valueOf(value);
+    }
+
+    private int intFromRecord(Map<String, Object> record, String key) {
+        Object value = record.get(key);
+        if (value instanceof Number) return ((Number) value).intValue();
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
     private void saveToFirestore(String fullTime, String mealInfo, int score, String diary) {
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
@@ -147,11 +181,15 @@ public class InputFragment extends Fragment {
 
         String dateId = fullTime.split(" ")[0];
 
-        // 💡 [5단계 격리 반영] 저장할 때도 현재 로그인한 유저의 고유 UID를 가져옵니다.
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
 
-        // 💡 [5단계 격리 반영] users/{uid}/daily_records/{dateId} 구조로 완벽히 격리하여 저장합니다.
+        if (currentUser == null) {
+            GuestRecordStore.saveTodayRecord(requireContext(), record, dateId);
+            android.util.Log.d("GuestRecord", "게스트 기록은 Firestore에 저장하지 않고 오늘 하루 로컬에만 저장했습니다.");
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users")
                 .document(uid)
                 .collection("daily_records")

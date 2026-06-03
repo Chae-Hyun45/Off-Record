@@ -124,9 +124,23 @@ public class CalendarFragment extends Fragment {
         if (getActivity() == null) return;
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
         String monthPrefix = String.format(Locale.getDefault(), "%04d-%02d", currentYear, currentMonth + 1);
 
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            recordedEmotionMap.clear();
+            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+            if (guestRecord != null) {
+                String dateKey = String.valueOf(guestRecord.get("date"));
+                if (dateKey.startsWith(monthPrefix)) {
+                    recordedEmotionMap.put(dateKey, String.valueOf(guestRecord.get("emotion")));
+                }
+            }
+            renderCalendar();
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users").document(uid).collection("daily_records")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -241,8 +255,24 @@ public class CalendarFragment extends Fragment {
         if (getActivity() == null) return;
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
 
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+            if (guestRecord != null && dateKey.equals(String.valueOf(guestRecord.get("date")))) {
+                showRecordDetail(
+                        String.valueOf(guestRecord.get("emotion")),
+                        String.valueOf(guestRecord.get("score")),
+                        String.valueOf(guestRecord.get("diary")),
+                        String.valueOf(guestRecord.get("stress"))
+                );
+            } else {
+                showEmptyState("게스트 기록은 오늘 하루 기록만 볼 수 있습니다.");
+            }
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users").document(uid).collection("daily_records").document(dateKey).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -251,15 +281,7 @@ public class CalendarFragment extends Fragment {
                         String score = (scoreLong != null) ? String.valueOf(scoreLong) : "-";
                         String diary = documentSnapshot.getString("diary");
                         String stress = documentSnapshot.getString("stress");
-                        if (stress == null || stress.isEmpty() || stress.equals("미선택")) stress = "-";
-
-                        showRecordEmoji(emotion);
-                        tvRecordStatus.setText("감정 기록");
-                        tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
-                        tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-                        tvScoreChip.setText("점수 | " + score + "점");
-                        tvStressChip.setText("스트레스 | " + stress);
-                        detailText.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
+                        showRecordDetail(emotion, score, diary, stress);
                     } else {
                         showEmptyState("이날의 기록이 없습니다.");
                     }
@@ -268,6 +290,19 @@ public class CalendarFragment extends Fragment {
                     showEmptyState("기록을 불러오지 못했습니다.");
                     android.util.Log.e("CalendarFragment", "Error fetching record", e);
                 });
+    }
+
+    private void showRecordDetail(String emotion, String score, String diary, String stress) {
+        if (stress == null || stress.isEmpty() || stress.equals("미선택")) stress = "-";
+        if (score == null || score.isEmpty()) score = "-";
+
+        showRecordEmoji(emotion);
+        tvRecordStatus.setText("감정 기록");
+        tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
+        tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tvScoreChip.setText("점수 | " + score + "점");
+        tvStressChip.setText("스트레스 | " + stress);
+        detailText.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
     }
 
     private void showRecordEmoji(String emotion) {
@@ -291,11 +326,11 @@ public class CalendarFragment extends Fragment {
         if (emotionCode == null) return Color.parseColor("#E3EFE5");
 
         switch (emotionCode) {
-            case "emo1": return Color.parseColor("#FEE99C"); // one.png 얼굴색
-            case "emo2": return Color.parseColor("#CDE099"); // two.png 얼굴색
+            case "emo1": return Color.parseColor("#6F7573"); // one.png 얼굴색
+            case "emo2": return Color.parseColor("#45714D"); // two.png 얼굴색
             case "emo3": return Color.parseColor("#85B785"); // three.png 얼굴색
-            case "emo4": return Color.parseColor("#45714D"); // four.png 얼굴색
-            case "emo5": return Color.parseColor("#6F7573"); // five.png 얼굴색
+            case "emo4": return Color.parseColor("#CDE099"); // four.png 얼굴색
+            case "emo5": return Color.parseColor("#FEE99C"); // five.png 얼굴색
             default: return Color.parseColor("#E3EFE5");
         }
     }

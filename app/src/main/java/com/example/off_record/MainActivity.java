@@ -1,12 +1,9 @@
 package com.example.off_record;
 
 import android.Manifest;
-import android.app.AlarmManager;
 import android.app.Dialog;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
@@ -15,6 +12,7 @@ import android.os.Bundle;
 import android.view.View;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
@@ -22,7 +20,6 @@ import androidx.fragment.app.Fragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.Calendar;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -31,6 +28,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -95,40 +93,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupDailyAlarm() {
-        SharedPreferences pref = getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
-
-        if (!pref.getBoolean("alarm_on", true)) return;
-
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(this, AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        int hour = pref.getInt("alarm_hour", 21);
-        int minute = pref.getInt("alarm_minute", 0);
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_YEAR, 1);
-        }
-
-        if (alarmManager != null) {
-            alarmManager.setInexactRepeating(
-                    AlarmManager.RTC_WAKEUP,
-                    calendar.getTimeInMillis(),
-                    AlarmManager.INTERVAL_DAY,
-                    pendingIntent
-            );
-        }
+        AlarmScheduler.scheduleFromPreferences(this);
     }
 
     // 3. 감정 선택 팝업창 띄우는 함수
@@ -148,16 +113,13 @@ public class MainActivity extends AppCompatActivity {
                 btn.setOnClickListener(v -> {
                     dialog.dismiss();
 
-                    // 4. 선택한 감정의 ID 정보를 Bundle에 담아서 InputFragment로 전달
                     InputFragment fragment = new InputFragment();
                     Bundle bundle = new Bundle();
 
-                    // 클릭된 버튼의 Resource ID 이름을 문자열로 보냄 (예: "emo1")
                     String emotionKey = getResources().getResourceEntryName(id);
                     bundle.putString("selected_emotion", emotionKey);
                     fragment.setArguments(bundle);
 
-                    // 화면 전환
                     getSupportFragmentManager().beginTransaction()
                             .replace(R.id.frameLayout, fragment)
                             .commit();

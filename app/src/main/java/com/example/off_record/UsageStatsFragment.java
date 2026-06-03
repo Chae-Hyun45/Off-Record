@@ -65,7 +65,6 @@ public class UsageStatsFragment extends Fragment {
         Map<String, Long> appUsageMap = new HashMap<>();
         List<AppInterval> intervalList = new ArrayList<>();
 
-        // 💡 실시간 상태 전환 추적을 위한 변수
         String currentActiveApp = null;
         long currentAppStartTime = 0;
 
@@ -79,7 +78,6 @@ public class UsageStatsFragment extends Fragment {
             long eventTime = event.getTimeStamp();
 
             if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                // 💡 [채현님 버그 해결] 새로운 앱이 켜졌는데 기존 앱이 PAUSED 로그를 누락했다면, 새 앱이 켜진 시점에 강제 종료 정산
                 if (currentActiveApp != null && !currentActiveApp.equals(pkg)) {
                     long duration = eventTime - currentAppStartTime;
                     if (duration > 0) {
@@ -91,7 +89,6 @@ public class UsageStatsFragment extends Fragment {
                 currentAppStartTime = eventTime;
             }
             else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                // 정상적으로 앱이 닫힌 경우 정산
                 if (currentActiveApp != null && currentActiveApp.equals(pkg)) {
                     long duration = eventTime - currentAppStartTime;
                     if (duration > 0) {
@@ -103,7 +100,6 @@ public class UsageStatsFragment extends Fragment {
             }
         }
 
-        // 현재 마지막으로 켜져 있는 앱 마저 정산
         if (currentActiveApp != null) {
             long duration = endTime - currentAppStartTime;
             if (duration > 0) {
