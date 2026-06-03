@@ -20,6 +20,9 @@ public class AlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        // setExact 계열은 반복 예약이 아니므로, 알림이 울린 뒤 다음 날 알림을 다시 예약한다.
+        AlarmScheduler.scheduleNextDayFromPreferences(context);
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)
                     != PackageManager.PERMISSION_GRANTED) {

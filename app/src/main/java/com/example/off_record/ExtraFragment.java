@@ -18,6 +18,8 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import androidx.fragment.app.Fragment;
 
+import java.util.Map;
+
 public class ExtraFragment extends Fragment {
 
     private FirebaseFirestore db;
@@ -39,11 +41,14 @@ public class ExtraFragment extends Fragment {
     }
 
     private void loadRecordsFromFirestore(LayoutInflater inflater) {
-        // 💡 [5단계 격리 반영] 현재 로그인한 유저의 고유 UID를 가져옵니다.
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
 
-        // 💡 [5단계 격리 반영] 공용 보관함이 아닌 users/{uid}/daily_records 경로를 타깃팅하여 최신순으로 정렬합니다.
+        if (currentUser == null) {
+            loadGuestTodayRecord(inflater);
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users")
                 .document(uid)
                 .collection("daily_records")
@@ -132,6 +137,67 @@ public class ExtraFragment extends Fragment {
                     tvArchiveSummary.setText("기록을 불러오는 중 오류가 발생했습니다.");
                     android.util.Log.e("ExtraFragment", "Error fetching records", e);
                 });
+    }
+
+    private void loadGuestTodayRecord(LayoutInflater inflater) {
+        GuestRecordStore.clearIfNotToday(requireContext());
+        Map<String, Object> record = GuestRecordStore.getTodayRecord(requireContext());
+
+        if (record == null) {
+            tvArchiveSummary.setText("게스트 기록은 오늘 하루만 임시로 보관돼요");
+            recordsContainer.addView(createEmptyView());
+            return;
+        }
+
+        String fullDate = String.valueOf(record.get("timestamp"));
+        String[] dateInfo = getDateInfo(fullDate);
+        recordsContainer.addView(createMonthHeader(dateInfo[1]));
+
+        View itemView = inflater.inflate(R.layout.item_record, recordsContainer, false);
+        ImageView ivEmoji = itemView.findViewById(R.id.ivItemEmoji);
+        TextView tvDateTag = itemView.findViewById(R.id.tvItemDateTag);
+        TextView tvDiary = itemView.findViewById(R.id.tvItemDiary);
+        TextView tvMeta = itemView.findViewById(R.id.tvItemMeta);
+
+        String emotion = String.valueOf(record.get("emotion"));
+        String diary = String.valueOf(record.get("diary"));
+        String score = String.valueOf(record.get("score"));
+
+        tvDateTag.setText(dateInfo[2]);
+        tvDiary.setText(diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
+        tvMeta.setText("점수 | " + score + "점");
+        ivEmoji.setImageResource(getEmojiImage(emotion));
+
+        itemView.setClickable(true);
+        itemView.setFocusable(true);
+        itemView.setOnClickListener(v -> {
+            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                    fullDate,
+                    emotion,
+                    score,
+                    diary,
+                    record.get("meals"),
+                    record.get("influence"),
+                    record.get("stress"),
+                    record.get("fatigue"),
+                    record.get("sleep"),
+                    record.get("need"),
+                    record.get("feedback")
+            );
+
+            RecordDetailFragment fragment = new RecordDetailFragment();
+            Bundle bundle = new Bundle();
+            bundle.putString("record", formattedRecord);
+            fragment.setArguments(bundle);
+
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.frameLayout, fragment)
+                    .addToBackStack(null)
+                    .commit();
+        });
+
+        recordsContainer.addView(itemView);
+        tvArchiveSummary.setText("오늘 하루 1개의 게스트 기록이 임시 저장되어 있어요");
     }
 
     private View createMonthHeader(String monthTitle) {

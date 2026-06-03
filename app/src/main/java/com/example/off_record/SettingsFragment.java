@@ -1,8 +1,6 @@
 package com.example.off_record;
 
 import android.Manifest;
-import android.app.AlarmManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -12,7 +10,11 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.app.Dialog;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.widget.Button;
+import android.widget.NumberPicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -24,10 +26,9 @@ import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import com.google.android.material.timepicker.MaterialTimePicker;
-import com.google.android.material.timepicker.TimeFormat;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -39,13 +40,14 @@ public class SettingsFragment extends Fragment {
     private TextView tvAlarmTime;
     private SwitchCompat switchAlarm;
     private FirebaseAuth mAuth;
+    private FirebaseFirestore db;
     private TextView tvAccountName;
     private TextView tvLifeDataStatus;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
             registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
                 if (isGranted) {
-                    showMaterialTimePicker();
+                    showPrettyTimePicker();
                 } else {
                     if (switchAlarm != null) switchAlarm.setChecked(false);
                     Toast.makeText(getContext(), "알림 권한이 거부되었습니다.", Toast.LENGTH_SHORT).show();
@@ -57,6 +59,7 @@ public class SettingsFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
         mAuth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
         pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
 
         tvTotalDays = view.findViewById(R.id.tvTotalDays);
@@ -192,56 +195,95 @@ public class SettingsFragment extends Fragment {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.POST_NOTIFICATIONS)
                     == PackageManager.PERMISSION_GRANTED) {
-                showMaterialTimePicker();
+                showPrettyTimePicker();
             } else {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS);
             }
         } else {
-            showMaterialTimePicker();
+            showPrettyTimePicker();
         }
     }
 
-    private void showMaterialTimePicker() {
-        int currentHour = pref.getInt("alarm_hour", 21);
-        int currentMinute = pref.getInt("alarm_minute", 0);
+    private void showPrettyTimePicker() {
+        if (getContext() == null) return;
 
-        try {
-            MaterialTimePicker picker = new MaterialTimePicker.Builder()
-                    .setTimeFormat(TimeFormat.CLOCK_12H)
-                    .setHour(currentHour)
-                    .setMinute(currentMinute)
-                    .setTitleText("기록 알림 시간을 선택하세요")
-                    .setInputMode(MaterialTimePicker.INPUT_MODE_CLOCK)
-                    .build();
+        int savedHour = pref.getInt("alarm_hour", 21);
+        int savedMinute = pref.getInt("alarm_minute", 0);
 
-            picker.addOnPositiveButtonClickListener(v -> {
-                int hour = picker.getHour();
-                int minute = picker.getMinute();
+        Dialog dialog = new Dialog(requireContext());
+        dialog.setContentView(R.layout.dialog_alarm_time_picker);
 
-                pref.edit()
-                        .putBoolean("alarm_on", true)
-                        .putInt("alarm_hour", hour)
-                        .putInt("alarm_minute", minute)
-                        .apply();
-
-                updateTimeText(hour, minute);
-                setDailyAlarm(true);
-
-                if (switchAlarm != null) switchAlarm.setChecked(true);
-            });
-
-            picker.addOnNegativeButtonClickListener(v -> {
-                if (!pref.contains("alarm_hour") && switchAlarm != null) {
-                    switchAlarm.setChecked(false);
-                }
-            });
-
-            if (isAdded()) {
-                picker.show(getChildFragmentManager(), "MATERIAL_TIME_PICKER");
-            }
-        } catch (Exception e) {
-            showOldTimePicker();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
+
+        NumberPicker npAmPm = dialog.findViewById(R.id.npAmPm);
+        NumberPicker npHour = dialog.findViewById(R.id.npHour);
+        NumberPicker npMinute = dialog.findViewById(R.id.npMinute);
+        TextView btnCancel = dialog.findViewById(R.id.btnCancelTime);
+        TextView btnSave = dialog.findViewById(R.id.btnSaveTime);
+
+        if (npAmPm == null || npHour == null || npMinute == null || btnCancel == null || btnSave == null) {
+            showOldTimePicker();
+            return;
+        }
+
+        npAmPm.setMinValue(0);
+        npAmPm.setMaxValue(1);
+        npAmPm.setDisplayedValues(new String[]{"오전", "오후"});
+        npAmPm.setWrapSelectorWheel(false);
+        npAmPm.setValue(savedHour >= 12 ? 1 : 0);
+
+        npHour.setMinValue(1);
+        npHour.setMaxValue(12);
+        npHour.setWrapSelectorWheel(true);
+        int displayHour = (savedHour == 0 || savedHour == 12) ? 12 : savedHour % 12;
+        npHour.setValue(displayHour);
+
+        npMinute.setMinValue(0);
+        npMinute.setMaxValue(11);
+        npMinute.setDisplayedValues(createMinuteLabels());
+        npMinute.setWrapSelectorWheel(true);
+        npMinute.setValue(Math.min(11, savedMinute / 5));
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnSave.setOnClickListener(v -> {
+            int amPm = npAmPm.getValue();
+            int hour12 = npHour.getValue();
+            int minute = npMinute.getValue() * 5;
+
+            int hour24;
+            if (amPm == 0) {
+                hour24 = (hour12 == 12) ? 0 : hour12;
+            } else {
+                hour24 = (hour12 == 12) ? 12 : hour12 + 12;
+            }
+
+            pref.edit()
+                    .putBoolean("alarm_on", true)
+                    .putInt("alarm_hour", hour24)
+                    .putInt("alarm_minute", minute)
+                    .apply();
+
+            updateTimeText(hour24, minute);
+            boolean scheduled = setDailyAlarm(true);
+
+            if (switchAlarm != null) switchAlarm.setChecked(scheduled);
+            if (scheduled) {
+                Toast.makeText(getContext(), "알림 시간이 설정되었습니다.", Toast.LENGTH_SHORT).show();
+            }
+            dialog.dismiss();
+        });
+
+        dialog.show();
+    }
+
+    private String[] createMinuteLabels() {
+        String[] labels = new String[12];
+        for (int i = 0; i < 12; i++) {
+            labels[i] = String.format(Locale.KOREAN, "%02d", i * 5);
+        }
+        return labels;
     }
 
     private void showOldTimePicker() {
@@ -250,70 +292,56 @@ public class SettingsFragment extends Fragment {
 
         android.app.TimePickerDialog timePicker = new android.app.TimePickerDialog(getContext(),
                 (view, hourOfDay, min) -> {
+                    int roundedMinute = Math.min(55, (min / 5) * 5);
                     pref.edit()
                             .putBoolean("alarm_on", true)
                             .putInt("alarm_hour", hourOfDay)
-                            .putInt("alarm_minute", min)
+                            .putInt("alarm_minute", roundedMinute)
                             .apply();
-                    updateTimeText(hourOfDay, min);
-                    setDailyAlarm(true);
-                    if (switchAlarm != null) switchAlarm.setChecked(true);
+                    updateTimeText(hourOfDay, roundedMinute);
+                    boolean scheduled = setDailyAlarm(true);
+                    if (switchAlarm != null) switchAlarm.setChecked(scheduled);
                 }, hour, minute, false);
         timePicker.show();
     }
 
-    private void setDailyAlarm(boolean enable) {
-        if (getContext() == null) return;
-
-        AlarmManager alarmManager = (AlarmManager) requireContext().getSystemService(Context.ALARM_SERVICE);
-        Intent intent = new Intent(requireContext(), AlarmReceiver.class);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                requireContext(),
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
-        );
-
-        if (alarmManager == null) return;
+    private boolean setDailyAlarm(boolean enable) {
+        if (getContext() == null) return false;
 
         if (!enable) {
-            alarmManager.cancel(pendingIntent);
-            return;
+            AlarmScheduler.cancelDailyAlarm(requireContext());
+            return false;
         }
 
         int hour = pref.getInt("alarm_hour", 21);
         int minute = pref.getInt("alarm_minute", 0);
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.set(Calendar.HOUR_OF_DAY, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, 0);
-        calendar.set(Calendar.MILLISECOND, 0);
-
-        if (calendar.getTimeInMillis() <= System.currentTimeMillis()) {
-            calendar.add(Calendar.DAY_OF_YEAR, 1);
-        }
-
-        alarmManager.setInexactRepeating(
-                AlarmManager.RTC_WAKEUP,
-                calendar.getTimeInMillis(),
-                AlarmManager.INTERVAL_DAY,
-                pendingIntent
-        );
+        return AlarmScheduler.scheduleDailyAlarm(requireContext(), hour, minute, true);
     }
 
     private void updateStats() {
-        String allRecords = pref.getString("all_records", "");
-        if (allRecords.isEmpty()) {
-            if (tvTotalDays != null) tvTotalDays.setText("0일");
-        } else {
-            String[] recordsArray = allRecords.split("##");
-            int count = 0;
-            for (String r : recordsArray) {
-                if (r != null && !r.trim().isEmpty()) count++;
-            }
-            if (tvTotalDays != null) tvTotalDays.setText(count + "일");
+        if (tvTotalDays != null) tvTotalDays.setText("불러오는 중...");
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            int guestCount = GuestRecordStore.hasTodayRecord(requireContext()) ? 1 : 0;
+            if (tvTotalDays != null) tvTotalDays.setText(guestCount + "일");
+            return;
         }
+
+        db.collection("users")
+                .document(currentUser.getUid())
+                .collection("daily_records")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (tvTotalDays != null) {
+                        tvTotalDays.setText(queryDocumentSnapshots.size() + "일");
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (tvTotalDays != null) tvTotalDays.setText("0일");
+                    android.util.Log.e("SettingsFragment", "기록 수 조회 실패", e);
+                });
     }
 
     private void updateTimeText(int hour, int minute) {

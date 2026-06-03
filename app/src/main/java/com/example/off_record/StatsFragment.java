@@ -28,6 +28,7 @@ import com.github.mikephil.charting.utils.Transformer;
 import com.github.mikephil.charting.utils.ViewPortHandler;
 import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -41,15 +42,19 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class StatsFragment extends Fragment {
 
     private LineChart lineChart;
     private MaterialButtonToggleGroup toggleGroup;
+    private TextView tvTotalCount;
+    private TextView tvStreakTitle;
     private TextView tvStreakMessage;
 
     private FirebaseFirestore db;
     private String currentUid;
+    private boolean isGuestMode = false;
 
     private HashSet<String> diaryDatesSet = new HashSet<>();
     private HashMap<String, Float> diaryMoodMap = new HashMap<>();
@@ -65,25 +70,51 @@ public class StatsFragment extends Fragment {
 
         lineChart = view.findViewById(R.id.lineChart);
         toggleGroup = view.findViewById(R.id.toggleGroup);
+        tvTotalCount = view.findViewById(R.id.tvTotalCount);
+        tvStreakTitle = view.findViewById(R.id.tvStreakTitle);
         tvStreakMessage = view.findViewById(R.id.tvStreakMessage);
 
         db = FirebaseFirestore.getInstance();
 
-        // 💡 타 프래그먼트와 완벽한 결합을 위해 "guest_user" 고향 주소를 통일합니다.
-        if (FirebaseAuth.getInstance().getCurrentUser() != null) {
-            currentUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
-        } else {
-            currentUid = "guest_user";
-        }
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        currentUid = (currentUser != null) ? currentUser.getUid() : null;
+        isGuestMode = (currentUid == null);
 
         // 1. 차트 기본 레이아웃 셋팅
         setupLineChart();
-
-        // 파이어베이스 데이터 로드 및 연동
-        loadDiaryDataFromServer();
         setupToggleButtons();
 
+        if (isGuestMode) {
+            // 게스트는 DB 누적 통계는 없지만, 오늘 임시 기록이 있으면 오늘 데이터만 통계 화면에 표시합니다.
+            loadGuestDiaryData();
+        } else {
+            // 파이어베이스 데이터 로드 및 연동
+            loadDiaryDataFromServer();
+        }
+
         return view;
+    }
+
+    /**
+     * 게스트는 Firestore에 저장하지 않고 오늘 기록만 로컬에 임시 저장합니다.
+     * 오늘 임시 기록이 있으면 통계 화면에 오늘 데이터 1개만 보여주고, 날짜가 바뀌면 빈 상태가 됩니다.
+     */
+    private void showEmptyGuestStats() {
+        diaryDatesSet.clear();
+        diaryMoodMap.clear();
+
+        if (toggleGroup != null) {
+            toggleGroup.setVisibility(View.VISIBLE);
+        }
+        if (lineChart != null) {
+            lineChart.setVisibility(View.VISIBLE);
+        }
+        if (tvStreakTitle != null) {
+            tvStreakTitle.setVisibility(View.VISIBLE);
+        }
+
+        calculateDiaryStreak();
+        updateChartByPeriod("1주");
     }
 
     /**
@@ -192,63 +223,91 @@ public class StatsFragment extends Fragment {
     private void updateChartByPeriod(String period) {
         List<Entry> entries = new ArrayList<>();
         XAxis xAxis = lineChart.getXAxis();
-        String label = "내 기분 추이 흐름";
+        String label = isGuestMode ? "오늘 게스트 감정 기록" : "내 기분 추이 흐름";
 
         switch (period) {
             case "1주":
                 String[] weekLabels = {"월", "화", "수", "목", "금", "토", "일"};
+                Calendar weekCal = Calendar.getInstance();
+                int todayDow = weekCal.get(Calendar.DAY_OF_WEEK);
+                int diffToMonday = (todayDow + 5) % 7;
+                weekCal.add(Calendar.DATE, -diffToMonday);
 
-                entries.add(new Entry(0f, getMoodOrFake(6, 4f)));
-                entries.add(new Entry(1f, getMoodOrFake(5, 2f)));
-                entries.add(new Entry(2f, getMoodOrFake(4, 3f)));
-                entries.add(new Entry(3f, getMoodOrFake(3, 5f)));
-                entries.add(new Entry(4f, getMoodOrFake(2, 2f)));
-                entries.add(new Entry(5f, getMoodOrFake(1, 4f)));
-                entries.add(new Entry(6f, getMoodOrFake(0, 5f)));
+                for (int i = 0; i < 7; i++) {
+                    String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(weekCal.getTime());
+                    if (diaryMoodMap.containsKey(fullDateKey)) {
+                        entries.add(new Entry((float) i, diaryMoodMap.get(fullDateKey)));
+                    }
+                    weekCal.add(Calendar.DATE, 1);
+                }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(weekLabels));
                 xAxis.setLabelCount(7, true);
-                label = "이번 주 감정 추이";
+                label = isGuestMode ? "오늘 게스트 감정 기록" : "이번 주 감정 추이";
                 break;
 
             case "1개월":
                 ArrayList<String> monthLabels = new ArrayList<>();
                 SimpleDateFormat labelSdf = new SimpleDateFormat("MM/dd", Locale.KOREA);
                 Calendar cal = Calendar.getInstance();
-
                 cal.add(Calendar.DATE, -29);
+
                 for (int i = 0; i < 30; i++) {
                     monthLabels.add(labelSdf.format(cal.getTime()));
-
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
-                    float moodValue = diaryMoodMap.containsKey(fullDateKey) ? diaryMoodMap.get(fullDateKey) : (float)(2.0 + Math.random() * 3.0);
-                    entries.add(new Entry((float) i, moodValue));
-
+                    if (diaryMoodMap.containsKey(fullDateKey)) {
+                        entries.add(new Entry((float) i, diaryMoodMap.get(fullDateKey)));
+                    }
                     cal.add(Calendar.DATE, 1);
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(monthLabels));
                 xAxis.setLabelCount(5, false);
-                label = "최근 1개월 감정 흐름";
+                label = isGuestMode ? "오늘 게스트 감정 기록" : "최근 1개월 감정 흐름";
                 break;
 
             case "1년":
                 String[] yearLabels = {"1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"};
+                HashMap<Integer, ArrayList<Float>> monthMoodMap = new HashMap<>();
+
+                for (Map.Entry<String, Float> entry : diaryMoodMap.entrySet()) {
+                    try {
+                        Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).parse(entry.getKey());
+                        Calendar dateCal = Calendar.getInstance();
+                        dateCal.setTime(date);
+                        int year = dateCal.get(Calendar.YEAR);
+                        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
+                        if (year == currentYear) {
+                            int monthIndex = dateCal.get(Calendar.MONTH);
+                            if (!monthMoodMap.containsKey(monthIndex)) {
+                                monthMoodMap.put(monthIndex, new ArrayList<>());
+                            }
+                            monthMoodMap.get(monthIndex).add(entry.getValue());
+                        }
+                    } catch (ParseException e) {
+                        e.printStackTrace();
+                    }
+                }
 
                 for (int i = 0; i < 12; i++) {
-                    float monthAverage = (float) (2.5 + Math.random() * 2.5);
-                    entries.add(new Entry((float) i, monthAverage));
+                    ArrayList<Float> moods = monthMoodMap.get(i);
+                    if (moods != null && !moods.isEmpty()) {
+                        float sum = 0f;
+                        for (Float mood : moods) sum += mood;
+                        entries.add(new Entry((float) i, sum / moods.size()));
+                    }
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(yearLabels));
                 xAxis.setLabelCount(12, true);
-                label = "올해 월별 감정 흐름";
+                label = isGuestMode ? "오늘 게스트 감정 기록" : "올해 월별 감정 흐름";
                 break;
         }
 
         if (entries.isEmpty()) {
             lineChart.clear();
-            lineChart.setNoDataText("선택한 기간에 기록된 기분 데이터가 없습니다.");
+            lineChart.setNoDataText("아직 기록된 기분 데이터가 없습니다.");
+            lineChart.invalidate();
             return;
         }
 
@@ -256,35 +315,27 @@ public class StatsFragment extends Fragment {
         dataSet.setColor(Color.parseColor("#2E7D32"));
         dataSet.setCircleColor(Color.parseColor("#4CAF50"));
         dataSet.setLineWidth(3f);
-        dataSet.setCircleRadius(4.5f);
+        dataSet.setCircleRadius(5.5f);
         dataSet.setDrawCircleHole(true);
         dataSet.setValueTextSize(11f);
         dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        // 실제 기록만 선으로 연결합니다. CUBIC_BEZIER는 같은 점수 사이에서도 곡선이 과하게 꺾여 보일 수 있어 LINEAR로 고정합니다.
+        dataSet.setMode(LineDataSet.Mode.LINEAR);
 
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
         lineChart.invalidate();
     }
 
-    private float getMoodOrFake(int daysAgo, float fakeValue) {
-        Calendar cal = Calendar.getInstance();
-        cal.add(Calendar.DATE, -daysAgo);
-        String targetDate = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
-
-        if (diaryMoodMap.containsKey(targetDate)) {
-            return diaryMoodMap.get(targetDate);
-        }
-        return fakeValue;
-    }
-
     /**
      * 5. 파이어베이스 데이터 조회 (💡 5단계 독립 서랍 격리 및 데이터 규격 매핑 적용)
      */
     private void loadDiaryDataFromServer() {
-        if (currentUid == null) return;
+        if (currentUid == null) {
+            loadGuestDiaryData();
+            return;
+        }
 
-        // 💡 공용 diaries 컬렉션 대신 users -> {현재UID} -> daily_records 개별 경로를 완벽히 타깃팅합니다.
         db.collection("users")
                 .document(currentUid)
                 .collection("daily_records")
@@ -300,16 +351,7 @@ public class StatsFragment extends Fragment {
 
                             // 💡 문자열 코드형 감정 데이터("emo1"~"emo5")를 그래프 소수점 점수(1.0f~5.0f)로 매핑합니다.
                             String emotion = document.getString("emotion");
-                            float moodScore = 3.0f; // 기본값 매핑
-                            if (emotion != null) {
-                                switch (emotion) {
-                                    case "emo1": moodScore = 1.0f; break;
-                                    case "emo2": moodScore = 2.0f; break;
-                                    case "emo3": moodScore = 3.0f; break;
-                                    case "emo4": moodScore = 4.0f; break;
-                                    case "emo5": moodScore = 5.0f; break;
-                                }
-                            }
+                            float moodScore = emotionToMoodScore(emotion);
 
                             if (dateStr != null) {
                                 diaryDatesSet.add(dateStr);
@@ -322,6 +364,35 @@ public class StatsFragment extends Fragment {
                         Toast.makeText(getContext(), "데이터 로드 실패", Toast.LENGTH_SHORT).show();
                     }
                 });
+    }
+
+    private void loadGuestDiaryData() {
+        diaryDatesSet.clear();
+        diaryMoodMap.clear();
+
+        GuestRecordStore.clearIfNotToday(requireContext());
+        Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+        if (guestRecord != null) {
+            String dateStr = String.valueOf(guestRecord.get("date"));
+            String emotion = String.valueOf(guestRecord.get("emotion"));
+            diaryDatesSet.add(dateStr);
+            diaryMoodMap.put(dateStr, emotionToMoodScore(emotion));
+        }
+
+        calculateDiaryStreak();
+        updateChartByPeriod("1주");
+    }
+
+    private float emotionToMoodScore(String emotion) {
+        if (emotion == null) return 3.0f;
+        switch (emotion) {
+            case "emo1": return 1.0f;
+            case "emo2": return 2.0f;
+            case "emo3": return 3.0f;
+            case "emo4": return 4.0f;
+            case "emo5": return 5.0f;
+            default: return 3.0f;
+        }
     }
 
     /**
