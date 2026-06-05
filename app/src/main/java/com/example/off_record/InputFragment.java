@@ -1,5 +1,7 @@
 package com.example.off_record;
 
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,8 +17,6 @@ import android.widget.TextView;
 import androidx.fragment.app.Fragment;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
@@ -70,31 +70,42 @@ public class InputFragment extends Fragment {
 
         clearAllGroups();
 
+        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+        String allRecords = pref.getString("all_records", "");
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (allRecords.contains(today)) {
+            String[] recordsArray = allRecords.split("##");
+            for (String record : recordsArray) {
+                if (record.startsWith(today)) {
+                    String[] detail = record.split("\\|");
 
-        if (currentUser == null) {
-            GuestRecordStore.clearIfNotToday(requireContext());
-            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
-            if (guestRecord != null) {
-                applyRecordToInputView(view, guestRecord, seekBar, tvScoreValue, etDiary,
-                        cbBreakfast, cbLunch, cbDinner, cbLateNight);
-            } else {
-                updateEmotionHighlight(view);
+                    if (detail.length >= 5) {
+                        if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
+                        updateEmotionHighlight(view);
+
+                        seekBar.setProgress(Integer.parseInt(detail[2]));
+                        tvScoreValue.setText(detail[2] + "점");
+                        etDiary.setText(detail[3]);
+
+                        cbBreakfast.setChecked(detail[4].contains("아침"));
+                        cbLunch.setChecked(detail[4].contains("점심"));
+                        cbDinner.setChecked(detail[4].contains("저녁"));
+                        cbLateNight.setChecked(detail[4].contains("야식"));
+                    }
+
+                    if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
+                    if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
+                    if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
+                    if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
+                    if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
+
+                    if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
+                    break;
+                }
             }
         } else {
-            String uid = currentUser.getUid();
-            db.collection("users").document(uid).collection("daily_records").document(today).get()
-                    .addOnSuccessListener(doc -> {
-                        if (doc.exists()) {
-                            Map<String, Object> savedRecord = new HashMap<>(doc.getData());
-                            applyRecordToInputView(view, savedRecord, seekBar, tvScoreValue, etDiary,
-                                    cbBreakfast, cbLunch, cbDinner, cbLateNight);
-                        } else {
-                            updateEmotionHighlight(view);
-                        }
-                    });
+            updateEmotionHighlight(view);
         }
 
         if (btnComplete != null) {
@@ -104,6 +115,32 @@ public class InputFragment extends Fragment {
                         + (cbLunch.isChecked() ? "점심 " : "")
                         + (cbDinner.isChecked() ? "저녁 " : "")
                         + (cbLateNight.isChecked() ? "야식" : "");
+
+                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
+                        fullTime,
+                        selectedEmotion,
+                        seekBar.getProgress(),
+                        etDiary.getText().toString(),
+                        mealInfo,
+                        getSelectedText(rgInfluence),
+                        getSelectedText(rgStress),
+                        getSelectedText(rgFatigue),
+                        getSelectedText(rgSleep),
+                        getSelectedText(rgNeed),
+                        getSelectedText(rgFeedback));
+
+                SharedPreferences.Editor editor = pref.edit();
+                String oldRecords = pref.getString("all_records", "");
+                StringBuilder updatedList = new StringBuilder();
+
+                for (String r : oldRecords.split("##")) {
+                    if (!r.isEmpty() && !r.startsWith(today)) {
+                        updatedList.append(r).append("##");
+                    }
+                }
+
+                editor.putString("all_records", newRecord + "##" + updatedList.toString());
+                editor.apply();
 
                 // Firestore에 데이터 저장
                 saveToFirestore(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
@@ -120,51 +157,6 @@ public class InputFragment extends Fragment {
         return view;
     }
 
-    private void applyRecordToInputView(View view, Map<String, Object> record, SeekBar seekBar, TextView tvScoreValue,
-                                        EditText etDiary, CheckBox cbBreakfast, CheckBox cbLunch,
-                                        CheckBox cbDinner, CheckBox cbLateNight) {
-        if (record == null) {
-            updateEmotionHighlight(view);
-            return;
-        }
-
-        if (selectedEmotion.isEmpty()) selectedEmotion = stringFromRecord(record, "emotion");
-        updateEmotionHighlight(view);
-
-        int score = intFromRecord(record, "score");
-        seekBar.setProgress(score);
-        tvScoreValue.setText(score + "점");
-        etDiary.setText(stringFromRecord(record, "diary"));
-
-        String meals = stringFromRecord(record, "meals");
-        cbBreakfast.setChecked(meals.contains("아침"));
-        cbLunch.setChecked(meals.contains("점심"));
-        cbDinner.setChecked(meals.contains("저녁"));
-        cbLateNight.setChecked(meals.contains("야식"));
-
-        setRadioCheckedByText(rgInfluence, stringFromRecord(record, "influence"));
-        setRadioCheckedByText(rgStress, stringFromRecord(record, "stress"));
-        setRadioCheckedByText(rgFatigue, stringFromRecord(record, "fatigue"));
-        setRadioCheckedByText(rgSleep, stringFromRecord(record, "sleep"));
-        setRadioCheckedByText(rgNeed, stringFromRecord(record, "need"));
-        setRadioCheckedByText(rgFeedback, stringFromRecord(record, "feedback"));
-    }
-
-    private String stringFromRecord(Map<String, Object> record, String key) {
-        Object value = record.get(key);
-        return value == null ? "" : String.valueOf(value);
-    }
-
-    private int intFromRecord(Map<String, Object> record, String key) {
-        Object value = record.get(key);
-        if (value instanceof Number) return ((Number) value).intValue();
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception e) {
-            return 0;
-        }
-    }
-
     private void saveToFirestore(String fullTime, String mealInfo, int score, String diary) {
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
@@ -179,25 +171,15 @@ public class InputFragment extends Fragment {
         record.put("need", getSelectedText(rgNeed));
         record.put("feedback", getSelectedText(rgFeedback));
 
+        // 날짜를 문서 ID로 사용하여 하루에 하나의 기록만 저장 (또는 덮어쓰기)
         String dateId = fullTime.split(" ")[0];
 
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-
-        if (currentUser == null) {
-            GuestRecordStore.saveTodayRecord(requireContext(), record, dateId);
-            android.util.Log.d("GuestRecord", "게스트 기록은 Firestore에 저장하지 않고 오늘 하루 로컬에만 저장했습니다.");
-            return;
-        }
-
-        String uid = currentUser.getUid();
-        db.collection("users")
-                .document(uid)
-                .collection("daily_records")
+        db.collection("daily_records")
                 .document(dateId)
                 .set(record)
                 .addOnSuccessListener(aVoid -> {
                     if (getContext() != null) {
-                        android.util.Log.d("Firestore", "유저별 개인 방에 기록이 성공적으로 저장되었습니다.");
+                        android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -324,15 +306,7 @@ public class InputFragment extends Fragment {
             ImageButton button = view.findViewById(resIds[i]);
 
             if (button != null) {
-                boolean isSelected = selectedEmotion.equals(codes[i]);
-
-                // 선택된 이모지는 은은한 연두 배경 + 얇은 테두리
-                button.setBackgroundResource(isSelected ? R.drawable.emoji_selected_bg : android.R.color.transparent);
-
-                // 선택된 이모지는 조금만 더 선명하고 크게
-                button.setAlpha(isSelected ? 1.0f : 0.68f);
-                button.setScaleX(isSelected ? 1.06f : 1.0f);
-                button.setScaleY(isSelected ? 1.06f : 1.0f);
+                button.setBackgroundResource(selectedEmotion.equals(codes[i]) ? R.drawable.circle_bg : 0);
             }
         }
     }

@@ -132,6 +132,7 @@ public class StatsFragment extends Fragment {
         xAxis.setDrawGridLines(false);
         xAxis.setTextSize(11f);
         xAxis.setGranularity(1f);
+        xAxis.setGranularityEnabled(true);
 
         EmojiYAxisRenderer emojiRenderer = new EmojiYAxisRenderer(
                 lineChart.getViewPortHandler(),
@@ -204,23 +205,32 @@ public class StatsFragment extends Fragment {
         XAxis xAxis = lineChart.getXAxis();
         String label = isGuestMode ? "오늘 게스트 감정 기록" : "내 기분 추이 흐름";
 
+        float totalScore = 0f;
+        int scoreCount = 0;
+
         switch (period) {
             case "1주":
                 String[] weekLabels = {"월", "화", "수", "목", "금", "토", "일"};
                 Calendar weekCal = Calendar.getInstance();
                 int todayDow = weekCal.get(Calendar.DAY_OF_WEEK);
-                int diffToMonday = (todayDow + 5) % 7;
+                // 일요일(1) -> 6, 월요일(2) -> 0 ... 토요일(7) -> 5
+                int diffToMonday = (todayDow == Calendar.SUNDAY) ? 6 : todayDow - 2;
                 weekCal.add(Calendar.DATE, -diffToMonday);
 
                 for (int i = 0; i < 7; i++) {
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(weekCal.getTime());
                     if (diaryMoodMap.containsKey(fullDateKey)) {
-                        entries.add(new Entry((float) i, diaryMoodMap.get(fullDateKey)));
+                        float score = diaryMoodMap.get(fullDateKey);
+                        entries.add(new Entry((float) i, score));
+                        totalScore += score;
+                        scoreCount++;
                     }
                     weekCal.add(Calendar.DATE, 1);
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(weekLabels));
+                xAxis.setAxisMinimum(0f);
+                xAxis.setAxisMaximum(6f);
                 xAxis.setLabelCount(7, true);
                 label = isGuestMode ? "오늘 게스트 감정 기록" : "이번 주 감정 추이";
                 break;
@@ -235,12 +245,17 @@ public class StatsFragment extends Fragment {
                     monthLabels.add(labelSdf.format(cal.getTime()));
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
                     if (diaryMoodMap.containsKey(fullDateKey)) {
-                        entries.add(new Entry((float) i, diaryMoodMap.get(fullDateKey)));
+                        float score = diaryMoodMap.get(fullDateKey);
+                        entries.add(new Entry((float) i, score));
+                        totalScore += score;
+                        scoreCount++;
                     }
                     cal.add(Calendar.DATE, 1);
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(monthLabels));
+                xAxis.setAxisMinimum(0f);
+                xAxis.setAxisMaximum(29f);
                 xAxis.setLabelCount(5, false);
                 label = isGuestMode ? "오늘 게스트 감정 기록" : "최근 1개월 감정 흐름";
                 break;
@@ -273,15 +288,22 @@ public class StatsFragment extends Fragment {
                     if (moods != null && !moods.isEmpty()) {
                         float sum = 0f;
                         for (Float mood : moods) sum += mood;
-                        entries.add(new Entry((float) i, sum / moods.size()));
+                        float avg = sum / moods.size();
+                        entries.add(new Entry((float) i, avg));
+                        totalScore += avg;
+                        scoreCount++;
                     }
                 }
 
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(yearLabels));
+                xAxis.setAxisMinimum(0f);
+                xAxis.setAxisMaximum(11f);
                 xAxis.setLabelCount(12, true);
                 label = isGuestMode ? "오늘 게스트 감정 기록" : "올해 월별 감정 흐름";
                 break;
         }
+
+        updateAnalysisResult(period, totalScore, scoreCount);
 
         if (entries.isEmpty()) {
             lineChart.clear();
@@ -300,9 +322,63 @@ public class StatsFragment extends Fragment {
         dataSet.setValueTextColor(Color.BLACK);
         dataSet.setMode(LineDataSet.Mode.LINEAR);
 
+        // 그라데이션 추가
+        dataSet.setDrawFilled(true);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            android.graphics.drawable.Drawable drawable = 
+                new android.graphics.drawable.GradientDrawable(
+                    android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[]{Color.parseColor("#4CAF50"), Color.parseColor("#00FFFFFF")}
+                );
+            dataSet.setFillDrawable(drawable);
+        } else {
+            dataSet.setFillColor(Color.parseColor("#4CAF50"));
+        }
+
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
         lineChart.invalidate();
+    }
+
+    private void updateAnalysisResult(String period, float totalScore, int count) {
+        if (count == 0) {
+            tvStreakMessage.setText(period + " 동안의 기록이 없습니다. 일기를 작성해 보세요!");
+            return;
+        }
+
+        float avgScore = totalScore / count;
+        String emoji = getEmojiForScore(avgScore);
+        String moodText = getMoodTextForScore(avgScore);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(period).append(" 평균 감정: ").append(emoji).append(" (").append(moodText).append(")\n");
+        sb.append("기록 횟수: ").append(count).append("회\n\n");
+        
+        if (avgScore >= 4.0f) {
+            sb.append("대체로 긍정적인 감정을 유지하고 계시네요! 지금처럼 나를 위한 시간을 가져보세요. ✨");
+        } else if (avgScore >= 2.5f) {
+            sb.append("평온한 감정 흐름을 보이고 있습니다. 조금 더 활기찬 활동을 시도해보는 건 어떨까요? 🌱");
+        } else {
+            sb.append("요즘 마음이 조금 무거우신 것 같아요. 충분한 휴식과 함께 따뜻한 차 한 잔 어떠신가요? 🍵");
+        }
+
+        tvStreakMessage.setText(sb.toString());
+    }
+
+    private String getEmojiForScore(float score) {
+        if (score <= 1.5f) return "😆";
+        if (score <= 2.5f) return "😊";
+        if (score <= 3.5f) return "😐";
+        if (score <= 4.5f) return "😔";
+        return "😠";
+    }
+
+    private String getMoodTextForScore(float score) {
+        if (score <= 1.5f) return "아주 좋음";
+        if (score <= 2.5f) return "좋음";
+        if (score <= 3.5f) return "평범";
+        if (score <= 4.5f) return "지침";
+        return "화남/힘듦";
     }
 
     private void loadDiaryDataFromServer() {
@@ -330,6 +406,9 @@ public class StatsFragment extends Fragment {
                                 diaryDatesSet.add(dateStr);
                                 diaryMoodMap.put(dateStr, moodScore);
                             }
+                        }
+                        if (tvTotalCount != null) {
+                            tvTotalCount.setText(diaryDatesSet.size() + "회");
                         }
                         calculateDiaryStreak();
                         updateChartByPeriod("1주"); // 기본 시작 탭 주간으로 설정
