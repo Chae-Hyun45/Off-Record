@@ -1,262 +1,265 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/calendar_bg_gradient">
+    android:background="#F7F7F5">
 
-    <ScrollView
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingBottom="100dp"
-        android:background="@android:color/transparent">
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <!-- Title -->
+
+        <!-- Account Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="계정"
+            android:textColor="#8C8C8C"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            android:layout_marginBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="16dp">
+
+                    <ImageView
+                        android:id="@+id/ivProfile"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:src="@drawable/three"
+                        android:padding="0dp"/>
+
+                    <TextView
+                        android:id="@+id/tvAccountName"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_toEndOf="@id/ivProfile"
+                        android:layout_centerVertical="true"
+                        android:layout_marginStart="12dp"
+                        android:text="게스트 ⚠️"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:textColor="#252525"/>
+
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:src="@android:drawable/ic_media_next"
+                        app:tint="#CCCCCC"/>
+                </RelativeLayout>
+
+                <Button
+                    android:id="@+id/btnLogin"
+                    android:layout_width="match_parent"
+                    android:layout_height="55dp"
+                    android:text="가입/로그인하기"
+                    android:backgroundTint="#4CAF50"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    app:cornerRadius="12dp"/>
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Stats Summary Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="내 기록"
+            android:textColor="#8C8C8C"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="24dp">
+            android:orientation="horizontal"
+            android:layout_marginBottom="24dp">
 
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:fontFamily="sans-serif-black"
-                android:text="설정"
-                android:textColor="@color/text_main"
-                android:textSize="26sp" />
-
-            <!-- Profile Card -->
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.OffRecord.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp">
-
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardTotalDays"
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_weight="1"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                android:layout_marginEnd="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
                     android:orientation="vertical"
-                    android:padding="20dp">
-
-                    <RelativeLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginBottom="20dp">
-
-                        <com.google.android.material.card.MaterialCardView
-                            android:id="@+id/ivProfileCard"
-                            android:layout_width="56dp"
-                            android:layout_height="56dp"
-                            app:cardCornerRadius="28dp"
-                            app:cardElevation="0dp"
-                            app:strokeWidth="1dp"
-                            app:strokeColor="@color/border_light">
-
-                            <ImageView
-                                android:id="@+id/ivProfile"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:padding="12dp"
-                                android:src="@drawable/three" />
-                        </com.google.android.material.card.MaterialCardView>
-
-                        <LinearLayout
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:layout_marginStart="16dp"
-                            android:layout_toEndOf="@id/ivProfileCard"
-                            android:orientation="vertical">
-
-                            <TextView
-                                android:id="@+id/tvAccountName"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:fontFamily="sans-serif-bold"
-                                android:text="Guest"
-                                android:textColor="@color/text_main"
-                                android:textSize="17sp" />
-
-                            <TextView
-                                android:id="@+id/tvLoginPrompt"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:text="로그인이 필요합니다"
-                                android:textColor="@color/text_sub"
-                                android:textSize="13sp" />
-                        </LinearLayout>
-                    </RelativeLayout>
-
-                    <Button
-                        android:id="@+id/btnLogin"
-                        style="@style/Widget.OffRecord.Button"
-                        android:layout_width="match_parent"
-                        android:layout_height="50dp"
-                        android:text="로그인하기" />
+                    android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="기록한 하루" android:textSize="12sp" android:textColor="#8C8C8C"/>
+                    <TextView android:id="@+id/tvTotalDays" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0일" android:textSize="18sp" android:textStyle="bold" android:layout_marginTop="4dp"/>
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+            </androidx.cardview.widget.CardView>
 
-            <!-- Stats Summary -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardStatsReport"
+                android:layout_width="0dp"
+                android:layout_height="100dp"
+                android:layout_weight="1"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                android:layout_marginStart="8dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="분석 리포트" android:textSize="12sp" android:textColor="#8C8C8C"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="보기" android:textSize="18sp" android:textStyle="bold" android:layout_marginTop="4dp" android:textColor="#4CAF50"/>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+        </LinearLayout>
+
+        <!-- Settings List Section -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="기타"
+            android:textColor="#8C8C8C"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="12dp"/>
+
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp">
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:orientation="horizontal">
+                android:orientation="vertical">
 
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardTotalDays"
-                    style="@style/Widget.OffRecord.Card"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="기록한 날들"
-                            android:textColor="@color/text_sub"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:id="@+id/tvTotalDays"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:fontFamily="sans-serif-black"
-                            android:text="0일"
-                            android:textColor="@color/text_main"
-                            android:textSize="20sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/cardStatsReport"
-                    style="@style/Widget.OffRecord.Card"
-                    android:layout_width="0dp"
-                    android:layout_height="100dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    app:cardBackgroundColor="@color/brand_primary"
-                    app:strokeWidth="0dp">
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="match_parent"
-                        android:gravity="center"
-                        android:orientation="vertical"
-                        android:padding="12dp">
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="분석 결과"
-                            android:textColor="@color/brand_secondary"
-                            android:textSize="12sp" />
-
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="4dp"
-                            android:fontFamily="sans-serif-black"
-                            android:text="리포트"
-                            android:textColor="@color/brand_secondary"
-                            android:textSize="18sp" />
-                    </LinearLayout>
-                </com.google.android.material.card.MaterialCardView>
-            </LinearLayout>
-
-            <!-- Settings List -->
-            <com.google.android.material.card.MaterialCardView
-                style="@style/Widget.OffRecord.Card"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="32dp">
-
-                <LinearLayout
+                <!-- Alarm Toggle -->
+                <RelativeLayout
+                    android:id="@+id/itemNotification"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:layout_height="60dp"
+                    android:paddingHorizontal="20dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🔔 기록 알림 설정" android:layout_centerVertical="true" android:textColor="#252525"/>
+                    <androidx.appcompat.widget.SwitchCompat
+                        android:id="@+id/switchAlarm"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        app:thumbTint="#4CAF50"
+                        app:trackTint="#C8E6C9"/>
+                </RelativeLayout>
 
-                    <RelativeLayout
-                        android:id="@+id/itemNotification"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:paddingHorizontal="20dp">
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="20dp"/>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="기록 알림"
-                            android:textColor="@color/text_main"
-                            android:textSize="15sp" />
+                <!-- Notification Time Setting -->
+                <RelativeLayout
+                    android:id="@+id/itemNotificationTime"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:paddingHorizontal="20dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="⏰ 알림 시간 설정" android:layout_centerVertical="true" android:textColor="#252525"/>
+                    <TextView
+                        android:id="@+id/tvAlarmTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:text="오후 09:00"
+                        android:textColor="#8C8C8C"
+                        android:layout_marginEnd="25dp"/>
+                    <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:src="@android:drawable/ic_media_next" app:tint="#CCCCCC"/>
+                </RelativeLayout>
 
-                        <androidx.appcompat.widget.SwitchCompat
-                            android:id="@+id/switchAlarm"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true" />
-                    </RelativeLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="20dp"/>
 
-                    <View
-                        android:layout_width="match_parent"
-                        android:layout_height="1dp"
-                        android:layout_marginHorizontal="20dp"
-                        android:background="@color/border_light" />
+                <!-- Life Data Integration -->
+                <RelativeLayout
+                    android:id="@+id/itemLifeData"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:paddingHorizontal="20dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="📊 생활 데이터 연동" android:layout_centerVertical="true" android:textColor="#252525"/>
+                    <TextView android:id="@+id/tvLifeDataStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="미연동" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:textColor="#8C8C8C" android:layout_marginEnd="25dp"/>
+                    <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:src="@android:drawable/ic_media_next" app:tint="#CCCCCC"/>
+                </RelativeLayout>
 
-                    <RelativeLayout
-                        android:id="@+id/itemNotificationTime"
-                        android:layout_width="match_parent"
-                        android:layout_height="56dp"
-                        android:background="?attr/selectableItemBackground"
-                        android:paddingHorizontal="20dp">
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="20dp"/>
 
-                        <TextView
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_centerVertical="true"
-                            android:text="알림 시간 설정"
-                            android:textColor="@color/text_main"
-                            android:textSize="15sp" />
+                <!-- Voice Data Policy -->
+                <RelativeLayout
+                    android:id="@+id/itemVoicePolicy"
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:paddingHorizontal="20dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:background="?attr/selectableItemBackground">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="🎤 음성 데이터 자동 삭제 안내" android:layout_centerVertical="true" android:textColor="#252525"/>
+                    <ImageView android:layout_width="16dp" android:layout_height="16dp" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:src="@android:drawable/ic_media_next" app:tint="#CCCCCC"/>
+                </RelativeLayout>
 
-                        <TextView
-                            android:id="@+id/tvAlarmTime"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_alignParentEnd="true"
-                            android:layout_centerVertical="true"
-                            android:text="오후 09:00"
-                            android:textColor="@color/text_sub"
-                            android:textSize="14sp" />
-                    </RelativeLayout>
+                <View android:layout_width="match_parent" android:layout_height="1dp" android:background="#F0F0F0" android:layout_marginHorizontal="20dp"/>
 
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                <!-- App Version -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="60dp"
+                    android:paddingHorizontal="20dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ℹ️ 앱 버전" android:layout_centerVertical="true" android:textColor="#252525"/>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="1.0.0" android:layout_alignParentEnd="true" android:layout_centerVertical="true" android:textColor="#8C8C8C"/>
+                </RelativeLayout>
 
-            <TextView
-                android:id="@+id/tvLogout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center"
-                android:padding="12dp"
-                android:text="로그아웃"
-                android:textColor="@color/text_sub"
-                android:textSize="14sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
-        </LinearLayout>
-    </ScrollView>
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <TextView
+            android:id="@+id/tvLogout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="로그아웃"
+            android:textColor="#BCBCBC"
+            android:layout_gravity="center"
+            android:layout_marginTop="32dp"
+            android:layout_marginBottom="40dp"
+            android:padding="10dp"/>
+
+    </LinearLayout>
+</ScrollView>

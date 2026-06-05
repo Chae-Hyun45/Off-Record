@@ -1,65 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.OffRecord" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Main colors -->
-        <item name="colorPrimary">@color/brand_secondary</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/brand_primary</item>
-        <item name="android:windowBackground">@color/bg_white_soft</item>
-        <item name="android:statusBarColor">@color/bg_white_soft</item>
+    <style name="Base.Theme.OffRecord" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
         <item name="android:windowLightStatusBar">true</item>
-        
-        <!-- Typography -->
-        <item name="android:textColorPrimary">@color/text_main</item>
-        <item name="android:textColorSecondary">@color/text_sub</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:colorAccent">#6F8F72</item>
+        <item name="colorPrimary">#6F8F72</item>
+        <item name="colorPrimaryContainer">#E3EFE5</item>
+        <item name="colorSecondary">#85B785</item>
+        <item name="android:fontFamily">sans</item>
+    </style>
+
+    <style name="MyMaterialTimePickerTheme" parent="Theme.Material3.Light.Dialog">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="colorPrimary">#6F8F72</item>
     </style>
 
     <style name="Theme.OffRecord" parent="Base.Theme.OffRecord" />
-
-    <!-- Clean Professional Card Style -->
-    <style name="Widget.OffRecord.Card" parent="Widget.Material3.CardView.Elevated">
-        <item name="cardCornerRadius">20dp</item>
-        <item name="cardElevation">1dp</item>
-        <item name="cardBackgroundColor">@color/surface_card</item>
-        <item name="strokeWidth">1dp</item>
-        <item name="strokeColor">@color/border_light</item>
-    </style>
-
-    <!-- Professional Button Style -->
-    <style name="Widget.OffRecord.Button" parent="Widget.Material3.Button">
-        <item name="cornerRadius">12dp</item>
-        <item name="android:insetTop">0dp</item>
-        <item name="android:insetBottom">0dp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="backgroundTint">@color/brand_secondary</item>
-        <item name="android:textColor">@color/white</item>
-    </style>
-
-    <!-- Floating Action Button Style -->
-    <style name="Widget.OffRecord.FAB" parent="Widget.Material3.FloatingActionButton.Primary">
-        <item name="shapeAppearance">@style/ShapeAppearance.OffRecord.FAB</item>
-        <item name="backgroundTint">@color/brand_primary</item>
-    </style>
-
-    <style name="ShapeAppearance.OffRecord.FAB" parent="ShapeAppearance.Material3.MediumComponent">
-        <item name="cornerFamily">rounded</item>
-        <item name="cornerSize">20dp</item>
-    </style>
-
-    <style name="Widget.OffRecord.InputButton" parent="Widget.Material3.Button.TonalButton">
-        <item name="android:layout_width">0dp</item>
-        <item name="android:layout_weight">1</item>
-        <item name="android:layout_height">52dp</item>
-        <item name="android:button">@null</item>
-        <item name="android:background">@drawable/meal_selector</item>
-        <item name="android:gravity">center</item>
-        <item name="android:textColor">@color/meal_text_color</item>
-        <item name="android:textSize">13sp</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
-        <item name="backgroundTint">@null</item>
-    </style>
-
-    <style name="MyMaterialTimePickerTheme" parent="Theme.Material3.DayNight.Dialog">
-        <item name="colorPrimary">@color/primary_pastel_yellow</item>
-    </style>
 </resources>

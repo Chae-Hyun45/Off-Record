@@ -9,7 +9,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridLayout;
-import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -18,12 +17,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
@@ -32,55 +27,27 @@ import java.util.Map;
 public class CalendarFragment extends Fragment {
 
     private TextView selectedDate, detailText, tvRecordStatus, tvScoreChip, tvStressChip, tvQuestionMark;
-    private TextView tvMonthTitle, tvCalendarTitle;
-    private ImageButton btnPrevMonth, btnNextMonth;
+    private TextView tvMonthTitle, btnPrevMonth, btnNextMonth;
     private GridLayout weekGrid, calendarGrid;
     private ImageView selectedEmoji;
     private FirebaseFirestore db;
 
     private final Map<String, String> recordedEmotionMap = new HashMap<>();
     private int currentYear;
-    private int currentMonth;
+    private int currentMonth; // 0부터 시작: 0=1월
     private int selectedYear;
     private int selectedMonth;
     private int selectedDay;
 
-    private int colorButterYellow;
-    private int colorSoftCream;
-    private int colorTextPremiumMain;
-    private int colorTextPremiumSub;
-    private int colorMoodHappy;
-    private int colorMoodGood;
-    private int colorMoodNormal;
-    private int colorMoodTired;
-    private int colorMoodAngry;
-    private int colorMintDark;
+    private static final int COLOR_EMPTY_TEXT = Color.parseColor("#B7BDB7");
+    private static final int COLOR_TRANSPARENT = Color.TRANSPARENT;
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if (getContext() != null) {
-            // 🌟 Professional White Palette Sync
-            colorButterYellow = ContextCompat.getColor(getContext(), R.color.brand_primary);
-            colorSoftCream = ContextCompat.getColor(getContext(), R.color.bg_white_pure);
-            colorTextPremiumMain = ContextCompat.getColor(getContext(), R.color.text_main);
-            colorTextPremiumSub = ContextCompat.getColor(getContext(), R.color.text_sub);
-            colorMoodHappy = ContextCompat.getColor(getContext(), R.color.mood_5);
-            colorMoodGood = ContextCompat.getColor(getContext(), R.color.mood_4);
-            colorMoodNormal = ContextCompat.getColor(getContext(), R.color.mood_3);
-            colorMoodTired = ContextCompat.getColor(getContext(), R.color.mood_2);
-            colorMoodAngry = ContextCompat.getColor(getContext(), R.color.mood_1);
-            colorMintDark = ContextCompat.getColor(getContext(), R.color.brand_primary);
-        }
-    }
-
-    @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_calendar, container, false);
 
         db = FirebaseFirestore.getInstance();
 
-        tvCalendarTitle = view.findViewById(R.id.tvCalendarTitle);
         tvMonthTitle = view.findViewById(R.id.tvMonthTitle);
         btnPrevMonth = view.findViewById(R.id.btnPrevMonth);
         btnNextMonth = view.findViewById(R.id.btnNextMonth);
@@ -94,8 +61,6 @@ public class CalendarFragment extends Fragment {
         tvRecordStatus = view.findViewById(R.id.tvRecordStatus);
         tvScoreChip = view.findViewById(R.id.tvScoreChip);
         tvStressChip = view.findViewById(R.id.tvStressChip);
-
-        updateUserGreeting();
 
         Calendar today = Calendar.getInstance();
         currentYear = today.get(Calendar.YEAR);
@@ -112,27 +77,9 @@ public class CalendarFragment extends Fragment {
         return view;
     }
 
-    private void updateUserGreeting() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (tvCalendarTitle != null) {
-            if (user != null) {
-                String name = user.getDisplayName();
-                if (name == null || name.isEmpty()) {
-                    name = user.getEmail();
-                }
-                if (name != null && name.contains("@")) {
-                    name = name.split("@")[0];
-                }
-                tvCalendarTitle.setText(name + "님");
-            } else {
-                tvCalendarTitle.setText("로그인이 필요합니다");
-            }
-        }
-    }
-
     private void setupMonthButtons() {
-        if (btnPrevMonth != null) btnPrevMonth.setOnClickListener(v -> moveMonth(-1));
-        if (btnNextMonth != null) btnNextMonth.setOnClickListener(v -> moveMonth(1));
+        btnPrevMonth.setOnClickListener(v -> moveMonth(-1));
+        btnNextMonth.setOnClickListener(v -> moveMonth(1));
     }
 
     private void moveMonth(int amount) {
@@ -143,25 +90,26 @@ public class CalendarFragment extends Fragment {
         currentYear = calendar.get(Calendar.YEAR);
         currentMonth = calendar.get(Calendar.MONTH);
 
-        renderCalendar();
+        // 월 이동 시 해당 월 1일을 기본 선택합니다.
+        selectedYear = currentYear;
+        selectedMonth = currentMonth;
+        selectedDay = 1;
+
+        updateDateDisplay(selectedYear, selectedMonth, selectedDay);
         loadRecordedDatesForMonth();
     }
 
-    /**
-     * 1. 요일 헤더 영역 시안급 무드로 전면 리뉴얼
-     */
     private void setupWeekHeader() {
-        if (weekGrid == null) return;
         weekGrid.removeAllViews();
-        String[] weeks = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
+        String[] weeks = {"일", "월", "화", "수", "목", "금", "토"};
 
         for (String week : weeks) {
             TextView textView = new TextView(requireContext());
             textView.setText(week);
             textView.setGravity(Gravity.CENTER);
-            textView.setTextColor(colorTextPremiumSub);
-            textView.setTextSize(12);
-            textView.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL)); // 모던 서체 적용
+            textView.setTextColor(Color.parseColor("#777777"));
+            textView.setTextSize(13);
+            textView.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
 
             GridLayout.LayoutParams params = new GridLayout.LayoutParams();
             params.width = 0;
@@ -173,40 +121,58 @@ public class CalendarFragment extends Fragment {
     }
 
     private void loadRecordedDatesForMonth() {
+        if (getActivity() == null) return;
+
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
         String monthPrefix = String.format(Locale.getDefault(), "%04d-%02d", currentYear, currentMonth + 1);
 
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            recordedEmotionMap.clear();
+            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+            if (guestRecord != null) {
+                String dateKey = String.valueOf(guestRecord.get("date"));
+                if (dateKey.startsWith(monthPrefix)) {
+                    recordedEmotionMap.put(dateKey, String.valueOf(guestRecord.get("emotion")));
+                }
+            }
+            renderCalendar();
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users").document(uid).collection("daily_records")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     recordedEmotionMap.clear();
+
                     for (QueryDocumentSnapshot document : queryDocumentSnapshots) {
                         String dateKey = document.getId();
                         if (dateKey.startsWith(monthPrefix)) {
-                            recordedEmotionMap.put(dateKey, document.getString("emotion"));
+                            String emotion = document.getString("emotion");
+                            recordedEmotionMap.put(dateKey, emotion);
                         }
                     }
+
                     renderCalendar();
                 })
-                .addOnFailureListener(e -> renderCalendar());
+                .addOnFailureListener(e -> {
+                    recordedEmotionMap.clear();
+                    renderCalendar();
+                    android.util.Log.e("CalendarFragment", "Error fetching monthly records", e);
+                });
     }
 
     private void renderCalendar() {
-        if (getContext() == null || calendarGrid == null) return;
+        if (getContext() == null) return;
 
         calendarGrid.removeAllViews();
-        if (tvMonthTitle != null) {
-            Calendar titleCal = Calendar.getInstance();
-            titleCal.set(currentYear, currentMonth, 1);
-            String monthName = new SimpleDateFormat("MMMM yyyy", Locale.ENGLISH).format(titleCal.getTime());
-            tvMonthTitle.setText(monthName);
-        }
+        tvMonthTitle.setText(String.format(Locale.getDefault(), "%04d년 %02d월", currentYear, currentMonth + 1));
 
         Calendar firstDayCalendar = Calendar.getInstance();
         firstDayCalendar.set(currentYear, currentMonth, 1);
 
-        int firstDayOfWeek = firstDayCalendar.get(Calendar.DAY_OF_WEEK);
+        int firstDayOfWeek = firstDayCalendar.get(Calendar.DAY_OF_WEEK); // 일요일=1
         int startBlankCount = firstDayOfWeek - 1;
         int lastDay = firstDayCalendar.getActualMaximum(Calendar.DAY_OF_MONTH);
 
@@ -219,14 +185,15 @@ public class CalendarFragment extends Fragment {
         }
     }
 
-    private View createBlankDayView() {
-        View view = new View(requireContext());
+    private TextView createBlankDayView() {
+        TextView textView = new TextView(requireContext());
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
-        params.height = dpToPx(52);
+        params.height = dpToPx(46);
         params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        view.setLayoutParams(params);
-        return view;
+        params.setMargins(2, 3, 2, 3);
+        textView.setLayoutParams(params);
+        return textView;
     }
 
     private TextView createDayView(int day) {
@@ -238,15 +205,10 @@ public class CalendarFragment extends Fragment {
 
         textView.setText(String.valueOf(day));
         textView.setGravity(Gravity.CENTER);
-        textView.setTextSize(14);
-        textView.setTypeface(Typeface.create("sans-serif-black", Typeface.NORMAL));
-
-        // 3D 조약돌 Pill 형태 백그라운드 드로어블 매칭
-        textView.setBackgroundResource(R.drawable.calendar_day_pill);
-
-        // 3D 파스텔 톤 5색 스타일 렌더링 시작
-        apply3DDayStyle(textView, emotion, isSelected, hasRecord);
-
+        textView.setTextSize(hasRecord ? 17 : 15);
+        textView.setTypeface(Typeface.DEFAULT, hasRecord ? Typeface.BOLD : Typeface.NORMAL);
+        textView.setTextColor(hasRecord ? getDayNumberColor(emotion) : COLOR_EMPTY_TEXT);
+        textView.setBackground(makeDayBackground(emotion, isSelected));
         textView.setOnClickListener(v -> {
             selectedYear = currentYear;
             selectedMonth = currentMonth;
@@ -257,79 +219,60 @@ public class CalendarFragment extends Fragment {
 
         GridLayout.LayoutParams params = new GridLayout.LayoutParams();
         params.width = 0;
-        params.height = dpToPx(52);
+        params.height = dpToPx(46);
         params.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        params.setMargins(dpToPx(4), dpToPx(4), dpToPx(4), dpToPx(4)); // 시안처럼 시원한 독립 배치 형성 마진
+        params.setMargins(2, 3, 2, 3);
         textView.setLayoutParams(params);
 
         return textView;
     }
 
-    /**
-     * 2. 날짜 조약돌 버튼에 파스텔 밀키 3D 5색을 수놓는 입체 스타일 가이드
-     */
-    private void apply3DDayStyle(TextView view, String emotion, boolean isSelected, boolean hasRecord) {
+    private GradientDrawable makeDayBackground(String emotion, boolean isSelected) {
+        GradientDrawable drawable = new GradientDrawable();
+        drawable.setShape(GradientDrawable.RECTANGLE);
+        drawable.setCornerRadius(dpToPx(18));
+
+        boolean hasRecord = emotion != null;
+        drawable.setColor(hasRecord ? getEmotionFaceColor(emotion) : COLOR_TRANSPARENT);
+
         if (isSelected) {
-            // 사용자가 오늘 날짜나 특정 날짜를 터치했을 때 붕 뜨는 하이라이트 원형 효과
-            GradientDrawable drawable = new GradientDrawable();
-            drawable.setShape(GradientDrawable.RECTANGLE);
-            drawable.setCornerRadius(dpToPx(40));
-            drawable.setColor(colorButterYellow);
-            view.setBackground(drawable);
-            view.setTextColor(Color.WHITE); // 선택된 칸 글자는 하얀색 고대비 처리
-            view.setElevation(dpToPx(5)); // 물리적 높이 추가
-        } else if (hasRecord) {
-            // 일기 기록이 채워져 있는 칸은 새 3D 밀키 파스텔 색상으로 정교하게 렌더링
-            GradientDrawable drawable = new GradientDrawable();
-            drawable.setShape(GradientDrawable.RECTANGLE);
-            drawable.setCornerRadius(dpToPx(40));
-            drawable.setColor(getEmotionColor(emotion)); // ⭕ 3D 파스텔 감정 컬러 대입!
-            view.setBackground(drawable);
-            view.setTextColor(colorTextPremiumMain); // 파스텔 위에는 아늑한 차콜색 글자로 가독성 완성!
-            view.setAlpha(1.0f);
-        } else {
-            // 기록이 아직 채워지지 않은 평범한 날짜들
-            view.setTextColor(colorTextPremiumSub);
+            int strokeColor = hasRecord ? getEmotionStrokeColor(emotion) : Color.parseColor("#8B918B");
+            drawable.setStroke(dpToPx(2), strokeColor);
         }
-    }
 
-    /**
-     * 3. [완벽 싱크] 사용자가 입력한 이모지 색깔(emo1~5)에 대응해 전문적인 파스텔 리소스를 반환
-     */
-    private int getEmotionColor(String emotionCode) {
-        if (emotionCode == null) return colorSoftCream;
-
-        switch (emotionCode) {
-            case "emo1":
-                return ContextCompat.getColor(requireContext(), R.color.mood_1);
-            case "emo2":
-                return ContextCompat.getColor(requireContext(), R.color.mood_2);
-            case "emo3":
-                return ContextCompat.getColor(requireContext(), R.color.mood_3);
-            case "emo4":
-                return ContextCompat.getColor(requireContext(), R.color.mood_4);
-            case "emo5":
-                return ContextCompat.getColor(requireContext(), R.color.mood_5);
-            default:
-                return colorSoftCream;
-        }
+        return drawable;
     }
 
     private void updateDateDisplay(int year, int month, int day) {
         String dateKey = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month + 1, day);
+        String dayText = String.format(Locale.getDefault(), "%02d월 %02d일", month + 1, day);
 
-        Calendar cal = Calendar.getInstance();
-        cal.set(year, month, day);
-        String dayText = new SimpleDateFormat("MMMM d'th'", Locale.ENGLISH).format(cal.getTime());
-
-        if (selectedDate != null) selectedDate.setText(dayText);
+        selectedDate.setText(dayText);
         loadRecordForDate(dateKey);
     }
 
     private void loadRecordForDate(String dateKey) {
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String uid = (currentUser != null) ? currentUser.getUid() : "guest_user";
+        if (getActivity() == null) return;
 
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
+        if (currentUser == null) {
+            GuestRecordStore.clearIfNotToday(requireContext());
+            Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
+            if (guestRecord != null && dateKey.equals(String.valueOf(guestRecord.get("date")))) {
+                showRecordDetail(
+                        String.valueOf(guestRecord.get("emotion")),
+                        String.valueOf(guestRecord.get("score")),
+                        String.valueOf(guestRecord.get("diary")),
+                        String.valueOf(guestRecord.get("stress"))
+                );
+            } else {
+                showEmptyState("게스트 기록은 오늘 하루 기록만 볼 수 있습니다.");
+            }
+            return;
+        }
+
+        String uid = currentUser.getUid();
         db.collection("users").document(uid).collection("daily_records").document(dateKey).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (documentSnapshot.exists()) {
@@ -338,51 +281,105 @@ public class CalendarFragment extends Fragment {
                         String score = (scoreLong != null) ? String.valueOf(scoreLong) : "-";
                         String diary = documentSnapshot.getString("diary");
                         String stress = documentSnapshot.getString("stress");
-                        if (stress == null || stress.equals("미선택")) stress = "-";
-
-                        showRecordEmoji(emotion);
-                        if (tvRecordStatus != null) {
-                            tvRecordStatus.setText("Captured");
-                            tvRecordStatus.setTextColor(colorMintDark);
-                        }
-                        if (tvScoreChip != null) tvScoreChip.setText("Score | " + score);
-                        if (tvStressChip != null) tvStressChip.setText("Stress | " + stress);
-                        if (detailText != null) {
-                            detailText.setText(diary == null || diary.isEmpty() ? "No story recorded for this day." : diary);
-                            detailText.setTextColor(colorTextPremiumMain);
-                        }
+                        showRecordDetail(emotion, score, diary, stress);
                     } else {
-                        showEmptyState();
+                        showEmptyState("이날의 기록이 없습니다.");
                     }
                 })
-                .addOnFailureListener(e -> showEmptyState());
+                .addOnFailureListener(e -> {
+                    showEmptyState("기록을 불러오지 못했습니다.");
+                    android.util.Log.e("CalendarFragment", "Error fetching record", e);
+                });
+    }
+
+    private void showRecordDetail(String emotion, String score, String diary, String stress) {
+        if (stress == null || stress.isEmpty() || stress.equals("미선택")) stress = "-";
+        if (score == null || score.isEmpty()) score = "-";
+
+        showRecordEmoji(emotion);
+        tvRecordStatus.setText("감정 기록");
+        tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
+        tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        tvScoreChip.setText("점수 | " + score + "점");
+        tvStressChip.setText("스트레스 | " + stress);
+        detailText.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
     }
 
     private void showRecordEmoji(String emotion) {
-        if (selectedEmoji != null) {
-            selectedEmoji.setVisibility(View.VISIBLE);
-            selectedEmoji.setImageResource(getEmojiImage(emotion));
-        }
-        if (tvQuestionMark != null) tvQuestionMark.setVisibility(View.GONE);
+        selectedEmoji.setVisibility(View.VISIBLE);
+        tvQuestionMark.setVisibility(View.GONE);
+        selectedEmoji.setImageResource(getEmojiImage(emotion));
     }
 
-    private void showEmptyState() {
-        if (selectedEmoji != null) selectedEmoji.setVisibility(View.GONE);
-        if (tvQuestionMark != null) tvQuestionMark.setVisibility(View.VISIBLE);
-        if (tvRecordStatus != null) {
-            tvRecordStatus.setText("Not recorded");
-            tvRecordStatus.setTextColor(colorTextPremiumSub);
+    private void showEmptyState(String message) {
+        selectedEmoji.setVisibility(View.GONE);
+        tvQuestionMark.setVisibility(View.VISIBLE);
+        tvRecordStatus.setText("기록 없음");
+        tvRecordStatus.setTextColor(Color.parseColor("#777777"));
+        tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.NORMAL);
+        tvScoreChip.setText("점수 | -");
+        tvStressChip.setText("스트레스 | -");
+        detailText.setText(message);
+    }
+
+    private int getEmotionFaceColor(String emotionCode) {
+        if (emotionCode == null) return Color.parseColor("#E3EFE5");
+
+        switch (emotionCode) {
+            case "emo1": return Color.parseColor("#6F7573"); // one.png 얼굴색
+            case "emo2": return Color.parseColor("#45714D"); // two.png 얼굴색
+            case "emo3": return Color.parseColor("#85B785"); // three.png 얼굴색
+            case "emo4": return Color.parseColor("#CDE099"); // four.png 얼굴색
+            case "emo5": return Color.parseColor("#FEE99C"); // five.png 얼굴색
+            default: return Color.parseColor("#E3EFE5");
         }
-        if (tvScoreChip != null) tvScoreChip.setText("Score | -");
-        if (tvStressChip != null) tvStressChip.setText("Stress | -");
-        if (detailText != null) {
-            detailText.setText("What story did you capture this day?");
-            detailText.setTextColor(colorTextPremiumSub);
+    }
+
+    private int getDayNumberColor(String emotionCode) {
+        if (emotionCode == null) return Color.parseColor("#2F4637");
+
+        switch (emotionCode) {
+            case "emo1":
+            case "emo2":
+            case "emo3":
+                return Color.parseColor("#202020"); // 밝은 이모지색 위에서는 진한 글자
+            case "emo4":
+            case "emo5":
+                return Color.WHITE; // 어두운 이모지색 위에서는 흰 글자
+            default:
+                return Color.parseColor("#202020");
+        }
+    }
+
+    private int getEmotionStrokeColor(String emotionCode) {
+        if (emotionCode == null) return Color.parseColor("#8B918B");
+
+        switch (emotionCode) {
+            case "emo1": return Color.parseColor("#D8BE4F");
+            case "emo2": return Color.parseColor("#97B85F");
+            case "emo3": return Color.parseColor("#4F965C");
+            case "emo4": return Color.parseColor("#2F5F3B");
+            case "emo5": return Color.parseColor("#555D5A");
+            default: return Color.parseColor("#8B918B");
+        }
+    }
+
+    private int getEmotionStatusColor(String emotionCode) {
+        if (emotionCode == null) return Color.parseColor("#2F4637");
+
+        switch (emotionCode) {
+            case "emo1": return Color.parseColor("#C9A93C");
+            case "emo2": return Color.parseColor("#7EA052");
+            case "emo3": return Color.parseColor("#4F965C");
+            case "emo4": return Color.parseColor("#3C7852");
+            case "emo5": return Color.parseColor("#6F7573");
+            default: return Color.parseColor("#2F4637");
         }
     }
 
     private int getEmojiImage(String emotionCode) {
         if (emotionCode == null) return R.drawable.three;
+
         switch (emotionCode) {
             case "emo1": return R.drawable.one;
             case "emo2": return R.drawable.two;
@@ -394,7 +391,6 @@ public class CalendarFragment extends Fragment {
     }
 
     private int dpToPx(int dp) {
-        if (getContext() == null) return dp;
         return (int) (dp * getResources().getDisplayMetrics().density + 0.5f);
     }
 }
