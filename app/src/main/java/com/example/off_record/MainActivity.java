@@ -10,6 +10,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageButton;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -52,11 +53,6 @@ public class MainActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
 
-            if (id == R.id.record) {
-                showEmotionDialog();
-                return false;
-            }
-
             Fragment selected = null;
             if (id == R.id.calendar) {
                 selected = new CalendarFragment();
@@ -77,6 +73,12 @@ public class MainActivity extends AppCompatActivity {
 
             return false;
         });
+
+        // 3. 중앙 FAB(이모지 버튼) 클릭 시 감정 선택 다이얼로그 표시
+        ImageButton fabAdd = findViewById(R.id.fabAdd);
+        if (fabAdd != null) {
+            fabAdd.setOnClickListener(v -> showEmotionDialog());
+        }
     }
 
     private void checkNotificationPermission() {
@@ -125,7 +127,7 @@ public class MainActivity extends AppCompatActivity {
                             .commit();
 
                     if (bottomNav != null) {
-                        bottomNav.getMenu().findItem(R.id.record).setChecked(true);
+                        // bottomNav.getMenu().findItem(R.id.record).setChecked(true);
                     }
                 });
             }

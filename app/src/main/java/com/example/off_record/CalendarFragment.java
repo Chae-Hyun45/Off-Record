@@ -9,6 +9,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridLayout;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -27,7 +28,8 @@ import java.util.Map;
 public class CalendarFragment extends Fragment {
 
     private TextView selectedDate, detailText, tvRecordStatus, tvScoreChip, tvStressChip, tvQuestionMark;
-    private TextView tvMonthTitle, btnPrevMonth, btnNextMonth;
+    private TextView tvMonthTitle;
+    private ImageButton btnPrevMonth, btnNextMonth;
     private GridLayout weekGrid, calendarGrid;
     private ImageView selectedEmoji;
     private FirebaseFirestore db;
@@ -336,19 +338,7 @@ public class CalendarFragment extends Fragment {
     }
 
     private int getDayNumberColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#2F4637");
-
-        switch (emotionCode) {
-            case "emo1":
-            case "emo2":
-            case "emo3":
-                return Color.parseColor("#202020"); // 밝은 이모지색 위에서는 진한 글자
-            case "emo4":
-            case "emo5":
-                return Color.WHITE; // 어두운 이모지색 위에서는 흰 글자
-            default:
-                return Color.parseColor("#202020");
-        }
+        return Color.BLACK;
     }
 
     private int getEmotionStrokeColor(String emotionCode) {

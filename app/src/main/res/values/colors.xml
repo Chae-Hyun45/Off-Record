@@ -24,6 +24,10 @@
     <color name="mood_4">#CBDC96</color>
     <color name="mood_5">#FAE499</color>
 
+    <!-- Selection Colors -->
+    <color name="selected_green_border">#4CAF50</color>
+    <color name="selected_green_bg">#E8F5E9</color>
+
     <!-- Legacy / Compatibility Tokens (Keep for safety) -->
     <color name="app_background">#FFFFFF</color>
     <color name="bg_soft_yellow">#FFFFFF</color>

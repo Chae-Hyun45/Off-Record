@@ -14,44 +14,30 @@
         android:layout_height="match_parent"
         android:paddingBottom="80dp" />
 
-    <com.google.android.material.bottomappbar.BottomAppBar
-        android:id="@+id/bottomAppBar"
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="80dp"
         android:layout_gravity="bottom"
-        app:backgroundTint="@color/white"
-        app:fabAlignmentMode="center"
-        app:fabCradleMargin="10dp"
-        app:fabCradleRoundedCornerRadius="24dp"
-        app:elevation="16dp">
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottomNav"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:layout_marginEnd="16dp"
-            android:paddingTop="8dp"
-            android:background="@android:color/transparent"
-            app:elevation="0dp"
-            app:labelVisibilityMode="labeled"
-            app:itemIconSize="24dp"
-            app:itemIconTint="@color/brand_secondary"
-            app:itemTextColor="@color/brand_secondary"
-            app:menu="@menu/bottom_menu" />
-
-    </com.google.android.material.bottomappbar.BottomAppBar>
+        android:background="@color/white"
+        app:elevation="16dp"
+        app:labelVisibilityMode="labeled"
+        app:itemIconSize="24dp"
+        app:itemIconTint="@color/brand_secondary"
+        app:itemTextColor="@color/brand_secondary"
+        app:menu="@menu/bottom_menu" />
 
     <ImageButton
         android:id="@+id/fabAdd"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="74dp"
+        android:layout_height="74dp"
         android:src="@drawable/five"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        android:padding="4dp"
-        android:layout_marginBottom="12dp"
-        app:layout_anchor="@id/bottomAppBar"
-        app:layout_anchorGravity="center_horizontal|top"
-        android:elevation="12dp" />
+        android:padding="2dp"
+        android:elevation="20dp"
+        android:translationY="-15dp"
+        app:layout_anchor="@id/bottomNav"
+        app:layout_anchorGravity="center_horizontal|bottom" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
