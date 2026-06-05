@@ -33,34 +33,28 @@ android {
 }
 
 dependencies {
+    // 기본 안드로이드X 라이브러리
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
 
-    // Firebase
+    // 🔥 Firebase 플랫폼 및 라이브러리 (중복 제거 완료)
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
     implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-ai")
 
-    // 📈 MPAndroidChart 그래프 라이브러리 추가
+    // 📈 MPAndroidChart 그래프 라이브러리 [cite: 1060]
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
 
+    // 비동기 작업 지원을 위한 구바 및 리액티브 스트림즈
+    implementation("com.google.guava:guava:31.0.1-android")
+    implementation("org.reactivestreams:reactive-streams:1.0.4")
+
+    // 테스트 라이브러리
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
-
-    implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
-    implementation("com.google.firebase:firebase-analytics")
-    implementation("com.google.firebase:firebase-ai")
-
-    // Required for one-shot operations (to use `ListenableFuture` from Guava Android)
-    implementation("com.google.guava:guava:31.0.1-android")
-
-    // Required for streaming operations (to use `Publisher` from Reactive Streams)
-    implementation("org.reactivestreams:reactive-streams:1.0.4")
-    implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
-    implementation("com.google.firebase:firebase-analytics")
-}
-}
+} // 짝이 딱 맞는 깨끗한 마무리지?

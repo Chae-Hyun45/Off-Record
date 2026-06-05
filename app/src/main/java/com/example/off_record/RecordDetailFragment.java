@@ -1,6 +1,7 @@
 package com.example.off_record;
 
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,18 +10,30 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
-
 
 
 public class RecordDetailFragment extends Fragment {
 
     private String record = "";
+    private int colorTextPrimary;
+    private int colorTextSecondary;
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_record_detail, container, false);
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (getContext() != null) {
+            colorTextPrimary = ContextCompat.getColor(getContext(), R.color.text_primary);
+            colorTextSecondary = ContextCompat.getColor(getContext(), R.color.text_secondary);
+        }
+    }
 
+    @Override
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_record_detail, container, false);
 
         if (getArguments() != null) {
             record = getArguments().getString("record", "");
@@ -35,11 +48,13 @@ public class RecordDetailFragment extends Fragment {
         TextView tvDetailEmotionName = view.findViewById(R.id.tvDetailEmotionName);
         LinearLayout detailContainer = view.findViewById(R.id.detailContainer);
 
-        btnBack.setOnClickListener(v -> {
-            if (getParentFragmentManager().getBackStackEntryCount() > 0) {
-                getParentFragmentManager().popBackStack();
-            }
-        });
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> {
+                if (getParentFragmentManager().getBackStackEntryCount() > 0) {
+                    getParentFragmentManager().popBackStack();
+                }
+            });
+        }
 
         String[] detail = record.split("\\|", -1);
 
@@ -56,45 +71,48 @@ public class RecordDetailFragment extends Fragment {
             String need = safeGet(detail, 9);
             String feedback = safeGet(detail, 10);
 
-            ivDetailEmoji.setImageResource(getEmojiImage(emotionCode));
-            tvDetailEmotionName.setText(getEmotionName(emotionCode));
-            tvDetailDate.setText(formatDate(fullDate));
-            tvDetailTime.setText(formatTime(fullDate));
-            tvDetailDiary.setText(diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
-            tvDetailScore.setText(score.isEmpty() ? "-점" : score + "점");
+            if (ivDetailEmoji != null) ivDetailEmoji.setImageResource(getEmojiImage(emotionCode));
+            if (tvDetailEmotionName != null) tvDetailEmotionName.setText(getEmotionName(emotionCode));
+            if (tvDetailDate != null) tvDetailDate.setText(formatDate(fullDate));
+            if (tvDetailTime != null) tvDetailTime.setText(formatTime(fullDate));
+            if (tvDetailDiary != null) tvDetailDiary.setText(diary.isEmpty() ? "작성된 이야기가 없습니다." : diary);
+            if (tvDetailScore != null) tvDetailScore.setText(score.isEmpty() ? "-점" : score + "점");
 
-            detailContainer.removeAllViews();
-            addInfoRow(detailContainer, "감정 영향", influence);
-            addInfoRow(detailContainer, "스트레스", stress);
-            addInfoRow(detailContainer, "피로도", fatigue);
-            addInfoRow(detailContainer, "수면", sleep);
-            addInfoRow(detailContainer, "필요한 것", need);
-            addInfoRow(detailContainer, "원하는 피드백", feedback);
-            addInfoRow(detailContainer, "식사", meal);
+            if (detailContainer != null) {
+                detailContainer.removeAllViews();
+                addInfoRow(detailContainer, "감정 영향", influence);
+                addInfoRow(detailContainer, "스트레스", stress);
+                if (!fatigue.isEmpty() && !"미선택".equals(fatigue)) addInfoRow(detailContainer, "피로도", fatigue);
+                if (!sleep.isEmpty() && !"미선택".equals(sleep)) addInfoRow(detailContainer, "수면", sleep);
+                if (!need.isEmpty() && !"미선택".equals(need)) addInfoRow(detailContainer, "필요한 것", need);
+                if (!feedback.isEmpty() && !"미선택".equals(feedback)) addInfoRow(detailContainer, "피드백", feedback);
+                if (!meal.isEmpty()) addInfoRow(detailContainer, "식사", meal);
+            }
         } else {
-            tvDetailDate.setText("기록을 불러올 수 없습니다");
-            tvDetailTime.setText("");
-            tvDetailDiary.setText("저장된 기록 형식이 올바르지 않습니다.");
-            tvDetailScore.setText("-점");
-            detailContainer.removeAllViews();
+            if (tvDetailDate != null) tvDetailDate.setText("기록을 불러올 수 없습니다");
+            if (tvDetailDiary != null) tvDetailDiary.setText("기록 정보가 올바르지 않습니다.");
         }
 
         return view;
     }
 
     private void addInfoRow(LinearLayout container, String label, String value) {
+        if (getContext() == null) return;
         View row = LayoutInflater.from(getContext()).inflate(R.layout.item_detail_row, container, false);
         TextView tvLabel = row.findViewById(R.id.tvDetailLabel);
         TextView tvValue = row.findViewById(R.id.tvDetailValue);
 
-        tvLabel.setText(label);
+        if (tvLabel != null) tvLabel.setText(label);
 
-        if (value == null || value.trim().isEmpty() || "미선택".equals(value.trim())) {
-            tvValue.setText("-");
-            tvValue.setTextColor(Color.parseColor("#AAAAAA"));
-        } else {
-            tvValue.setText(value.trim());
-            tvValue.setTextColor(Color.parseColor("#333333"));
+        if (tvValue != null) {
+            if (value == null || value.trim().isEmpty() || "미선택".equals(value.trim())) {
+                tvValue.setText("-");
+                tvValue.setTextColor(colorTextSecondary);
+            } else {
+                tvValue.setText(value.trim());
+                tvValue.setTextColor(colorTextPrimary);
+                tvValue.setTypeface(null, Typeface.BOLD);
+            }
         }
 
         container.addView(row);
@@ -109,9 +127,7 @@ public class RecordDetailFragment extends Fragment {
         try {
             String datePart = fullDate.split(" ")[0];
             String[] parts = datePart.split("-");
-            return Integer.parseInt(parts[0]) + "년 "
-                    + Integer.parseInt(parts[1]) + "월 "
-                    + Integer.parseInt(parts[2]) + "일";
+            return parts[0] + "년 " + Integer.parseInt(parts[1]) + "월 " + Integer.parseInt(parts[2]) + "일";
         } catch (Exception e) {
             return fullDate;
         }
@@ -122,16 +138,15 @@ public class RecordDetailFragment extends Fragment {
             String[] parts = fullDate.split(" ");
             if (parts.length > 1) return parts[1] + " 기록";
         } catch (Exception ignored) { }
-
         return "기록 상세";
     }
 
     private String getEmotionName(String emotionCode) {
-        if ("emo1".equals(emotionCode)) return "불편함";
-        if ("emo2".equals(emotionCode)) return "우울함";
+        if ("emo1".equals(emotionCode)) return "행복";
+        if ("emo2".equals(emotionCode)) return "좋음";
         if ("emo3".equals(emotionCode)) return "보통";
-        if ("emo4".equals(emotionCode)) return "좋음";
-        if ("emo5".equals(emotionCode)) return "매우 좋음";
+        if ("emo4".equals(emotionCode)) return "우울";
+        if ("emo5".equals(emotionCode)) return "화남";
         return "감정 미선택";
     }
 

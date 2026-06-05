@@ -39,7 +39,7 @@ public class SettingsFragment extends Fragment {
     private TextView tvTotalDays;
     private TextView tvAlarmTime;
     private SwitchCompat switchAlarm;
-    private FirebaseAuth mAuth; // 💡 파이어베이스 인증 객체 추가
+    private FirebaseAuth mAuth;
     private TextView tvAccountName;
 
     private final ActivityResultLauncher<String> requestPermissionLauncher =
@@ -56,7 +56,7 @@ public class SettingsFragment extends Fragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_settings, container, false);
 
-        mAuth = FirebaseAuth.getInstance(); // 💡 초기화
+        mAuth = FirebaseAuth.getInstance();
         pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
 
         tvTotalDays = view.findViewById(R.id.tvTotalDays);
@@ -65,24 +65,20 @@ public class SettingsFragment extends Fragment {
         Button btnLogin = view.findViewById(R.id.btnLogin);
         TextView tvLogout = view.findViewById(R.id.tvLogout);
         tvAccountName = view.findViewById(R.id.tvAccountName);
+        TextView tvLoginPrompt = view.findViewById(R.id.tvLoginPrompt);
 
         View itemNotificationTime = view.findViewById(R.id.itemNotificationTime);
-        View itemLifeData = view.findViewById(R.id.itemLifeData);
-        View itemVoicePolicy = view.findViewById(R.id.itemVoicePolicy);
         View cardTotalDays = view.findViewById(R.id.cardTotalDays);
         View cardStatsReport = view.findViewById(R.id.cardStatsReport);
 
         updateStats();
 
-        // 💡 [정원님 추가] 로그인 상태에 따른 UI 분기 처리
-        //  [교체할 코드 구역]
         FirebaseUser currentUser = mAuth.getCurrentUser();
         if (currentUser != null) {
-            // 🔓 로그인된 상태라면? 로그인 버튼 숨기고 로그아웃 글씨 보여주기
             if (btnLogin != null) btnLogin.setVisibility(View.GONE);
             if (tvLogout != null) tvLogout.setVisibility(View.VISIBLE);
+            if (tvLoginPrompt != null) tvLoginPrompt.setVisibility(View.GONE); // 로그인 시 프롬프트 숨김
 
-            // 💡 [팀장님 요구사항] 이메일을 확인해서 테스트 유저라면 사용자 닉네임으로 뿅 바꿔줍니다!
             String email = currentUser.getEmail();
             if (tvAccountName != null && email != null) {
                 if (email.contains("test1")) {
@@ -90,16 +86,14 @@ public class SettingsFragment extends Fragment {
                 } else if (email.contains("test2")) {
                     tvAccountName.setText("사용자 2 🌟");
                 } else {
-                    tvAccountName.setText(email); // 일반 가입 유저는 이메일 그대로 노출
+                    tvAccountName.setText(email);
                 }
             }
         }
         else {
-            // 🔒 로그아웃된 상태라면? 로그인 버튼 보여주고 로그아웃 글씨 숨기기
             if (btnLogin != null) btnLogin.setVisibility(View.VISIBLE);
             if (tvLogout != null) tvLogout.setVisibility(View.GONE);
-
-            // 💡 [이것도 필수!] 로그아웃되면 다시 원래대로 "게스트 ⚠️"로 돌려놓기
+            if (tvLoginPrompt != null) tvLoginPrompt.setVisibility(View.VISIBLE); // 비로그인 시 프롬프트 표시
             if (tvAccountName != null) tvAccountName.setText("게스트 ⚠️");
         }
 
@@ -144,7 +138,6 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        // 💡 로그인 버튼 누르면 로그인 화면으로 전환
         if (btnLogin != null) {
             btnLogin.setOnClickListener(v -> {
                 getParentFragmentManager().beginTransaction()
@@ -154,21 +147,15 @@ public class SettingsFragment extends Fragment {
             });
         }
 
-        // 💡 [정원님 추가] 로그아웃 버튼 누르면 진짜 파이어베이스 로그아웃 처리
         if (tvLogout != null) {
             tvLogout.setOnClickListener(v -> {
-                mAuth.signOut(); // 🚀 서버 로그아웃
+                mAuth.signOut();
                 Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
-
-                // 설정 화면 새로고침 (바뀐 UI 반영)
                 getParentFragmentManager().beginTransaction()
                         .replace(R.id.frameLayout, new SettingsFragment())
                         .commit();
             });
         }
-
-        if (itemLifeData != null) itemLifeData.setOnClickListener(v -> Toast.makeText(getContext(), "생활 데이터 연동 설정으로 이동합니다.", Toast.LENGTH_SHORT).show());
-        if (itemVoicePolicy != null) itemVoicePolicy.setOnClickListener(v -> showVoicePolicyDialog());
 
         return view;
     }
@@ -307,14 +294,5 @@ public class SettingsFragment extends Fragment {
         int displayHour = (hour == 0 || hour == 12) ? 12 : hour % 12;
         String timeStr = String.format(Locale.KOREAN, "%s %02d:%02d", amPm, displayHour, minute);
         tvAlarmTime.setText(timeStr);
-    }
-
-    private void showVoicePolicyDialog() {
-        if (getContext() == null) return;
-        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(requireContext());
-        builder.setTitle("음성 데이터 보안 안내");
-        builder.setMessage("사용자의 음성 기록은 AI 분석 직후 텍스트로만 보관되며, 원본 음성 파일은 보안을 위해 기기에서 즉시 자동 삭제됩니다.");
-        builder.setPositiveButton("확인", null);
-        builder.show();
     }
 }

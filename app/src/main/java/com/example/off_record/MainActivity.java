@@ -39,23 +39,12 @@ public class MainActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         bottomNav = findViewById(R.id.bottomNav);
 
-        // 앱이 켜질 때, 사용자가 알림을 켜둔 상태라면 매일 알림을 다시 예약
-        setupDailyAlarm();
-
-        // 1. 앱 실행 시 첫 화면은 캘린더로 설정
-        if (savedInstanceState == null) {
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.frameLayout, new CalendarFragment())
-                    .commit();
-            bottomNav.setSelectedItemId(R.id.calendar);
-        }
-
-        // 2. 바텀 네비게이션 클릭
+        // 2. 바텀 네비게이션 리스너 먼저 설정
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
+            android.util.Log.d("MainActivity", "BottomNav clicked: " + id);
 
-            if (id == R.id.record) {
-                showEmotionDialog();
+            if (id == R.id.placeholder) {
                 return false;
             }
 
@@ -79,6 +68,22 @@ public class MainActivity extends AppCompatActivity {
 
             return false;
         });
+
+        // 1. 앱 실행 시 첫 화면을 명시적으로 트랜잭션하여 캘린더를 바로 띄움
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.frameLayout, new CalendarFragment())
+                    .commit();
+            bottomNav.setSelectedItemId(R.id.calendar);
+        }
+
+        // 앱이 켜질 때, 사용자가 알림을 켜둔 상태라면 매일 알림을 다시 예약
+
+        // FAB 연결
+        View fabAdd = findViewById(R.id.fabAdd);
+        if (fabAdd != null) {
+            fabAdd.setOnClickListener(v -> showEmotionDialog());
+        }
     }
 
     private void checkNotificationPermission() {
@@ -138,6 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().setDimAmount(0.15f); // Soften the background dim
         }
 
         int[] emojiIds = {R.id.emo1, R.id.emo2, R.id.emo3, R.id.emo4, R.id.emo5};
@@ -146,25 +152,22 @@ public class MainActivity extends AppCompatActivity {
             View btn = dialog.findViewById(id);
             if (btn != null) {
                 btn.setOnClickListener(v -> {
-                    dialog.dismiss();
+                    // Playful scale effect before dismiss
+                    v.animate().scaleX(1.3f).scaleY(1.3f).setDuration(150).withEndAction(() -> {
+                        dialog.dismiss();
 
-                    // 4. 선택한 감정의 ID 정보를 Bundle에 담아서 InputFragment로 전달
-                    InputFragment fragment = new InputFragment();
-                    Bundle bundle = new Bundle();
+                        // 4. 선택한 감정의 ID 정보를 Bundle에 담아서 InputFragment로 전달
+                        InputFragment fragment = new InputFragment();
+                        Bundle bundle = new Bundle();
 
-                    // 클릭된 버튼의 Resource ID 이름을 문자열로 보냄 (예: "emo1")
-                    String emotionKey = getResources().getResourceEntryName(id);
-                    bundle.putString("selected_emotion", emotionKey);
-                    fragment.setArguments(bundle);
+                        String emotionKey = getResources().getResourceEntryName(id);
+                        bundle.putString("selected_emotion", emotionKey);
+                        fragment.setArguments(bundle);
 
-                    // 화면 전환
-                    getSupportFragmentManager().beginTransaction()
-                            .replace(R.id.frameLayout, fragment)
-                            .commit();
-
-                    if (bottomNav != null) {
-                        bottomNav.getMenu().findItem(R.id.record).setChecked(true);
-                    }
+                        getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.frameLayout, fragment)
+                                .commit();
+                    }).start();
                 });
             }
         }

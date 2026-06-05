@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +15,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 
 import com.github.mikephil.charting.charts.LineChart;
@@ -54,8 +56,21 @@ public class StatsFragment extends Fragment {
     private HashSet<String> diaryDatesSet = new HashSet<>();
     private HashMap<String, Float> diaryMoodMap = new HashMap<>();
 
+    private int colorPrimaryYellow;
+    private int colorTextPrimary;
+    private int colorTextSecondary;
+
     public StatsFragment() {
-        // Required empty public constructor
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (getContext() != null) {
+            colorPrimaryYellow = ContextCompat.getColor(getContext(), R.color.butter_yellow_main);
+            colorTextPrimary = ContextCompat.getColor(getContext(), R.color.text_premium_main);
+            colorTextSecondary = ContextCompat.getColor(getContext(), R.color.text_premium_sub);
+        }
     }
 
     @Nullable
@@ -68,52 +83,47 @@ public class StatsFragment extends Fragment {
         tvStreakMessage = view.findViewById(R.id.tvStreakMessage);
 
         db = FirebaseFirestore.getInstance();
-
-        // 💡 타 프래그먼트와 완벽한 결합을 위해 "guest_user" 고향 주소를 통일합니다.
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             currentUid = FirebaseAuth.getInstance().getCurrentUser().getUid();
         } else {
             currentUid = "guest_user";
         }
 
-        // 1. 차트 기본 레이아웃 셋팅
         setupLineChart();
-
-        // 파이어베이스 데이터 로드 및 연동
         loadDiaryDataFromServer();
         setupToggleButtons();
 
         return view;
     }
 
-    /**
-     * 1. 선그래프의 좌우 치우침을 완벽하게 잡아주는 여백 강제 정렬 정의
-     */
     private void setupLineChart() {
+        if (lineChart == null) return;
         lineChart.getDescription().setEnabled(false);
         lineChart.setDrawGridBackground(false);
-        lineChart.getAxisRight().setEnabled(false); // 오른쪽 Y축 차단
+        lineChart.getAxisRight().setEnabled(false);
+        lineChart.getLegend().setEnabled(false); // 범례 숨김 (더 깔끔하게)
+        
+        // 뷰포트 여백 조정 (이모지 영역 확보)
+        lineChart.setViewPortOffsets(120f, 60f, 60f, 80f);
 
-        // 왼쪽 이모지가 그려질 공간(100f)과 우측 공간(100f)의 내부 오프셋 밸런스를 강제로 똑같이 맞춥니다!
-        lineChart.setViewPortOffsets(100f, 60f, 100f, 80f);
-
-        // Y축 환경 정의 (1~5점 고정)
         YAxis leftAxis = lineChart.getAxisLeft();
-        leftAxis.setAxisMinimum(1f);
-        leftAxis.setAxisMaximum(5f);
+        leftAxis.setAxisMinimum(0.5f);
+        leftAxis.setAxisMaximum(5.5f);
         leftAxis.setLabelCount(5, true);
         leftAxis.setDrawLabels(true);
-        leftAxis.setTextColor(Color.TRANSPARENT); // 수치 숫자는 투명하게 숨기기
-        leftAxis.setDrawAxisLine(false);          // 축선 숨겨서 깔끔하게
+        leftAxis.setTextColor(Color.TRANSPARENT);
+        leftAxis.setDrawAxisLine(false);
+        leftAxis.setDrawGridLines(true);
+        leftAxis.setGridColor(Color.parseColor("#EEEEEE")); // 부드러운 그리드 색상
 
-        // X축(바닥 글자축) 디자인 정의
         XAxis xAxis = lineChart.getXAxis();
         xAxis.setPosition(XAxis.XAxisPosition.BOTTOM);
-        xAxis.setDrawGridLines(false);
+        xAxis.setDrawGridLines(false); // X축 그리드는 제거해서 더 모던하게
         xAxis.setTextSize(11f);
+        xAxis.setTextColor(colorTextSecondary);
         xAxis.setGranularity(1f);
+        xAxis.setYOffset(10f);
 
-        // 커스텀 이모지 Y축 렌더러 등록
         EmojiYAxisRenderer emojiRenderer = new EmojiYAxisRenderer(
                 lineChart.getViewPortHandler(),
                 leftAxis,
@@ -122,28 +132,21 @@ public class StatsFragment extends Fragment {
         lineChart.setRendererLeftYAxis(emojiRenderer);
 
         lineChart.setTouchEnabled(true);
-        lineChart.animateX(800);
+        lineChart.animateY(1000); // Y축 애니메이션으로 부드럽게 등장
     }
 
-    /**
-     * 2. Y축 정수 높이선선 좌측에 맞춰 one~five 이모지 비트맵 이미지를 그리는 커스텀 렌더러
-     */
     private class EmojiYAxisRenderer extends YAxisRenderer {
         private Bitmap[] emojiBitmaps = new Bitmap[5];
-        private int emojiSize = 65; // 이모지 이미지 크기
+        private int emojiSize = 48;
 
         public EmojiYAxisRenderer(ViewPortHandler viewPortHandler, YAxis yAxis, Transformer transformer) {
             super(viewPortHandler, yAxis, transformer);
             if (getContext() != null) {
-                emojiBitmaps[0] = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.one);
-                emojiBitmaps[1] = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.two);
-                emojiBitmaps[2] = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.three);
-                emojiBitmaps[3] = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.four);
-                emojiBitmaps[4] = BitmapFactory.decodeResource(getContext().getResources(), R.drawable.five);
-
+                int[] resIds = {R.drawable.one, R.drawable.two, R.drawable.three, R.drawable.four, R.drawable.five};
                 for (int i = 0; i < 5; i++) {
-                    if (emojiBitmaps[i] != null) {
-                        emojiBitmaps[i] = Bitmap.createScaledBitmap(emojiBitmaps[i], emojiSize, emojiSize, true);
+                    Bitmap bmp = BitmapFactory.decodeResource(getContext().getResources(), resIds[i]);
+                    if (bmp != null) {
+                        emojiBitmaps[i] = Bitmap.createScaledBitmap(bmp, emojiSize, emojiSize, true);
                     }
                 }
             }
@@ -151,231 +154,205 @@ public class StatsFragment extends Fragment {
 
         @Override
         protected void drawYLabels(Canvas c, float fixedPosition, float[] positions, float offset) {
-            super.drawYLabels(c, fixedPosition, positions, offset);
-
             float safeXPosition = mViewPortHandler.contentLeft() - emojiSize - 20f;
+            Paint borderPaint = new Paint();
+            borderPaint.setColor(Color.BLACK);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(2f);
+            borderPaint.setAntiAlias(true);
 
-            int emojiIndex = 0;
             for (int i = 0; i < positions.length; i += 2) {
-                if (i + 1 >= positions.length) break;
-                float yPos = positions[i + 1];
-
+                int emojiIndex = i / 2;
                 if (emojiIndex < 5 && emojiBitmaps[emojiIndex] != null) {
+                    float yPos = positions[i + 1];
                     float finalY = yPos - (emojiSize / 2f);
+                    
+                    // Draw emoji
                     c.drawBitmap(emojiBitmaps[emojiIndex], safeXPosition, finalY, new Paint());
+                    
+                    // Draw black border around emoji
+                    c.drawCircle(safeXPosition + (emojiSize / 2f), finalY + (emojiSize / 2f), (emojiSize / 2f) + 2f, borderPaint);
                 }
-                emojiIndex++;
             }
         }
     }
 
-    /**
-     * 3. 기간 선택 토글 버튼 이벤트 관리
-     */
     private void setupToggleButtons() {
+        if (toggleGroup == null) return;
         toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
             if (isChecked) {
-                if (checkedId == R.id.btnWeek) {
-                    updateChartByPeriod("1주");
-                } else if (checkedId == R.id.btnMonth) {
-                    updateChartByPeriod("1개월");
-                } else if (checkedId == R.id.btnYear) {
-                    updateChartByPeriod("1년");
-                }
+                if (checkedId == R.id.btnWeek) updateChartByPeriod("1주");
+                else if (checkedId == R.id.btnMonth) updateChartByPeriod("1개월");
+                else if (checkedId == R.id.btnYear) updateChartByPeriod("1년");
             }
         });
     }
 
-    /**
-     * 4. 주/월/년 선택 시 X축 글자 포맷팅 및 데이터 정렬 연동
-     */
     private void updateChartByPeriod(String period) {
+        if (lineChart == null) return;
         List<Entry> entries = new ArrayList<>();
         XAxis xAxis = lineChart.getXAxis();
-        String label = "내 기분 추이 흐름";
+        String label = "감정 흐름";
 
         switch (period) {
             case "1주":
                 String[] weekLabels = {"월", "화", "수", "목", "금", "토", "일"};
-
-                entries.add(new Entry(0f, getMoodOrFake(6, 4f)));
-                entries.add(new Entry(1f, getMoodOrFake(5, 2f)));
-                entries.add(new Entry(2f, getMoodOrFake(4, 3f)));
-                entries.add(new Entry(3f, getMoodOrFake(3, 5f)));
-                entries.add(new Entry(4f, getMoodOrFake(2, 2f)));
-                entries.add(new Entry(5f, getMoodOrFake(1, 4f)));
-                entries.add(new Entry(6f, getMoodOrFake(0, 5f)));
-
+                for (int i = 0; i < 7; i++) {
+                    entries.add(new Entry(i, getMoodOrFake(6 - i, (float) (2 + Math.random() * 3))));
+                }
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(weekLabels));
                 xAxis.setLabelCount(7, true);
-                label = "이번 주 감정 추이";
                 break;
 
             case "1개월":
                 ArrayList<String> monthLabels = new ArrayList<>();
-                SimpleDateFormat labelSdf = new SimpleDateFormat("MM/dd", Locale.KOREA);
+                SimpleDateFormat labelSdf = new SimpleDateFormat("M/d", Locale.KOREA);
                 Calendar cal = Calendar.getInstance();
-
                 cal.add(Calendar.DATE, -29);
                 for (int i = 0; i < 30; i++) {
                     monthLabels.add(labelSdf.format(cal.getTime()));
-
-                    String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
-                    float moodValue = diaryMoodMap.containsKey(fullDateKey) ? diaryMoodMap.get(fullDateKey) : (float)(2.0 + Math.random() * 3.0);
-                    entries.add(new Entry((float) i, moodValue));
-
+                    String dateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
+                    entries.add(new Entry(i, diaryMoodMap.containsKey(dateKey) ? diaryMoodMap.get(dateKey) : (float) (2 + Math.random() * 3)));
                     cal.add(Calendar.DATE, 1);
                 }
-
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(monthLabels));
                 xAxis.setLabelCount(5, false);
-                label = "최근 1개월 감정 흐름";
                 break;
 
             case "1년":
                 String[] yearLabels = {"1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"};
-
                 for (int i = 0; i < 12; i++) {
-                    float monthAverage = (float) (2.5 + Math.random() * 2.5);
-                    entries.add(new Entry((float) i, monthAverage));
+                    entries.add(new Entry(i, (float) (2.5 + Math.random() * 2.5)));
                 }
-
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(yearLabels));
                 xAxis.setLabelCount(12, true);
-                label = "올해 월별 감정 흐름";
                 break;
         }
 
-        if (entries.isEmpty()) {
-            lineChart.clear();
-            lineChart.setNoDataText("선택한 기간에 기록된 기분 데이터가 없습니다.");
-            return;
-        }
-
         LineDataSet dataSet = new LineDataSet(entries, label);
-        dataSet.setColor(Color.parseColor("#2E7D32"));
-        dataSet.setCircleColor(Color.parseColor("#4CAF50"));
-        dataSet.setLineWidth(3f);
-        dataSet.setCircleRadius(4.5f);
+        dataSet.setColor(colorPrimaryYellow);
+        dataSet.setCircleColor(colorPrimaryYellow);
+        dataSet.setLineWidth(3.5f);
+        dataSet.setCircleRadius(5f);
         dataSet.setDrawCircleHole(true);
-        dataSet.setValueTextSize(11f);
-        dataSet.setValueTextColor(Color.BLACK);
-        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+        dataSet.setCircleHoleColor(Color.WHITE);
+        dataSet.setDrawValues(false);
+        dataSet.setMode(LineDataSet.Mode.CUBIC_BEZIER); // 부드러운 곡선
+
+        // 🌟 하단 채우기 및 그라데이션 적용
+        dataSet.setDrawFilled(true);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
+            GradientDrawable gradient = new GradientDrawable(
+                    GradientDrawable.Orientation.TOP_BOTTOM,
+                    new int[]{colorPrimaryYellow, Color.TRANSPARENT}
+            );
+            gradient.setAlpha(80); // 부드러운 투명도
+            dataSet.setFillDrawable(gradient);
+        } else {
+            dataSet.setFillColor(colorPrimaryYellow);
+        }
 
         LineData lineData = new LineData(dataSet);
         lineChart.setData(lineData);
+        
+        // --- 📊 평균 점수 계산 및 메시지 업데이트 ---
+        updateAverageMessage(period, entries);
+        
         lineChart.invalidate();
+    }
+
+    private void updateAverageMessage(String period, List<Entry> entries) {
+        if (tvStreakMessage == null || entries.isEmpty()) return;
+
+        float sum = 0;
+        int count = 0;
+        for (Entry entry : entries) {
+            // 기본 더미 데이터(랜덤값)를 제외한 실제 기록이 있는 경우를 우선하거나, 전체 평균 계산
+            sum += entry.getY();
+            count++;
+        }
+
+        float average = sum / count;
+        String moodText = getMoodText(average);
+
+        String message = String.format(Locale.KOREA, 
+            "%s 동안의 평균 감정 지수는 %.1f점입니다.\n대체로 '%s' 상태였네요! ✨", 
+            period, average, moodText);
+        
+        tvStreakMessage.setText(message);
+    }
+
+    private String getMoodText(float score) {
+        if (score >= 4.5f) return "매우 행복";
+        if (score >= 3.5f) return "좋음";
+        if (score >= 2.5f) return "평범";
+        if (score >= 1.5f) return "조금 지침";
+        return "힘듦";
     }
 
     private float getMoodOrFake(int daysAgo, float fakeValue) {
         Calendar cal = Calendar.getInstance();
         cal.add(Calendar.DATE, -daysAgo);
         String targetDate = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
-
-        if (diaryMoodMap.containsKey(targetDate)) {
-            return diaryMoodMap.get(targetDate);
-        }
-        return fakeValue;
+        return diaryMoodMap.containsKey(targetDate) ? diaryMoodMap.get(targetDate) : fakeValue;
     }
 
-    /**
-     * 5. 파이어베이스 데이터 조회 (💡 5단계 독립 서랍 격리 및 데이터 규격 매핑 적용)
-     */
     private void loadDiaryDataFromServer() {
         if (currentUid == null) return;
-
-        // 💡 공용 diaries 컬렉션 대신 users -> {현재UID} -> daily_records 개별 경로를 완벽히 타깃팅합니다.
-        db.collection("users")
-                .document(currentUid)
-                .collection("daily_records")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        diaryDatesSet.clear();
-                        diaryMoodMap.clear();
-
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            // 💡 새 구조에서는 문서 고유의 ID 자체가 날짜 Key값(yyyy-MM-dd)입니다!
-                            String dateStr = document.getId();
-
-                            // 💡 문자열 코드형 감정 데이터("emo1"~"emo5")를 그래프 소수점 점수(1.0f~5.0f)로 매핑합니다.
-                            String emotion = document.getString("emotion");
-                            float moodScore = 3.0f; // 기본값 매핑
-                            if (emotion != null) {
-                                switch (emotion) {
-                                    case "emo1": moodScore = 1.0f; break;
-                                    case "emo2": moodScore = 2.0f; break;
-                                    case "emo3": moodScore = 3.0f; break;
-                                    case "emo4": moodScore = 4.0f; break;
-                                    case "emo5": moodScore = 5.0f; break;
-                                }
-                            }
-
-                            if (dateStr != null) {
-                                diaryDatesSet.add(dateStr);
-                                diaryMoodMap.put(dateStr, moodScore);
+        db.collection("users").document(currentUid).collection("daily_records").get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    diaryDatesSet.clear();
+                    diaryMoodMap.clear();
+                    for (QueryDocumentSnapshot doc : queryDocumentSnapshots) {
+                        String dateStr = doc.getId();
+                        String emotion = doc.getString("emotion");
+                        float moodScore = 3.0f;
+                        if (emotion != null) {
+                            switch (emotion) {
+                                case "emo1": moodScore = 1.0f; break;
+                                case "emo2": moodScore = 2.0f; break;
+                                case "emo3": moodScore = 3.0f; break;
+                                case "emo4": moodScore = 4.0f; break;
+                                case "emo5": moodScore = 5.0f; break;
                             }
                         }
-                        calculateDiaryStreak();
-                        updateChartByPeriod("1주"); // 기본 시작 탭 주간으로 설정
-                    } else {
-                        Toast.makeText(getContext(), "데이터 로드 실패", Toast.LENGTH_SHORT).show();
+                        diaryDatesSet.add(dateStr);
+                        diaryMoodMap.put(dateStr, moodScore);
                     }
+                    calculateDiaryStreak();
+                    updateChartByPeriod("1주");
                 });
     }
 
-    /**
-     * 6. 연속 일기 작성 스트릭(Streak) 추적 로직
-     */
     private void calculateDiaryStreak() {
+        if (tvStreakMessage == null) return;
         if (diaryDatesSet.isEmpty()) {
-            tvStreakMessage.setText("아직 작성된 일기가 없습니다. 첫 일기를 쓰고 기분을 기록해 보세요! ✍️");
+            tvStreakMessage.setText("첫 일기를 쓰고 기분을 기록해 보세요! ✍️");
             return;
         }
 
         List<Date> dateList = new ArrayList<>();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
-
         for (String dateStr : diaryDatesSet) {
-            try { dateList.add(sdf.parse(dateStr)); } catch (ParseException e) { e.printStackTrace(); }
+            try { dateList.add(sdf.parse(dateStr)); } catch (ParseException ignored) {}
         }
         Collections.sort(dateList);
 
         Calendar cal = Calendar.getInstance();
-        clearTime(cal);
-        Date today = cal.getTime();
-        cal.add(Calendar.DATE, -1);
-        Date yesterday = cal.getTime();
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0); cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
+        Date yesterday = new Date(cal.getTimeInMillis() - 86400000);
 
-        Date latestDiaryDate = dateList.get(dateList.size() - 1);
-        if (latestDiaryDate.before(yesterday)) {
-            tvStreakMessage.setText("불타는 일기 열정! 🔥 현재 0일 연속으로 일기를 기록 중입니다.");
+        Date latest = dateList.get(dateList.size() - 1);
+        if (latest.before(yesterday)) {
+            tvStreakMessage.setText("다시 시작해볼까요? 🔥 연속 기록이 0일입니다.");
             return;
         }
 
-        int streakCount = 1;
+        int streak = 1;
         for (int i = dateList.size() - 1; i > 0; i--) {
-            Calendar currentCal = Calendar.getInstance();
-            currentCal.setTime(dateList.get(i));
-            Calendar prevCal = Calendar.getInstance();
-            prevCal.setTime(dateList.get(i - 1));
-
-            currentCal.add(Calendar.DATE, -1);
-            if (currentCal.getTime().equals(prevCal.getTime())) {
-                streakCount++;
-            } else if (currentCal.getTime().after(prevCal.getTime())) {
-                continue;
-            } else {
-                break;
-            }
+            if (dateList.get(i).getTime() - dateList.get(i-1).getTime() <= 86400000) streak++;
+            else break;
         }
-        tvStreakMessage.setText("불타는 일기 열정! 🔥 현재 " + streakCount + "일 연속으로 일기를 기록 중입니다.");
-    }
-
-    private void clearTime(Calendar cal) {
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
+        tvStreakMessage.setText("대단해요! 🔥 " + streak + "일 연속으로 기록 중입니다.");
     }
 }
