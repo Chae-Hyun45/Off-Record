@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
@@ -8,25 +8,34 @@
     android:background="@color/bg_white_soft"
     tools:context=".MainActivity">
 
+    <!-- Fragment Container: Occupies space from top to top of bottomNav -->
     <FrameLayout
         android:id="@+id/frameLayout"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingBottom="80dp" />
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Bottom Navigation: Anchored to the bottom of the screen -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottomNav"
-        android:layout_width="match_parent"
-        android:layout_height="80dp"
-        android:layout_gravity="bottom"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
         android:background="@color/white"
         app:elevation="16dp"
-        app:labelVisibilityMode="labeled"
+        app:labelVisibilityMode="selected"
         app:itemIconSize="24dp"
-        app:itemIconTint="@color/brand_secondary"
-        app:itemTextColor="@color/brand_secondary"
-        app:menu="@menu/bottom_menu" />
+        app:itemIconTint="@color/nav_item_tint"
+        app:itemTextColor="@color/nav_item_tint"
+        app:menu="@menu/bottom_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
+    <!-- Floating Action Button (Emoji Button) -->
+    <!-- Positioned to float over the center of the bottomNav -->
     <ImageButton
         android:id="@+id/fabAdd"
         android:layout_width="74dp"
@@ -36,8 +45,10 @@
         android:scaleType="fitCenter"
         android:padding="2dp"
         android:elevation="20dp"
-        android:translationY="-15dp"
-        app:layout_anchor="@id/bottomNav"
-        app:layout_anchorGravity="center_horizontal|bottom" />
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintTop_toTopOf="@id/bottomNav"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:translationY="5dp" />
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.constraintlayout.widget.ConstraintLayout>

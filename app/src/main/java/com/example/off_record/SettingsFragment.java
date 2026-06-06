@@ -161,11 +161,15 @@ public class SettingsFragment extends Fragment {
         if (tvLogout != null) {
             tvLogout.setOnClickListener(v -> {
                 mAuth.signOut();
-                Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
+                if (getContext() != null) {
+                    Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
+                }
 
-                getParentFragmentManager().beginTransaction()
-                        .replace(R.id.frameLayout, new SettingsFragment())
-                        .commit();
+                if (isAdded()) {
+                    getParentFragmentManager().beginTransaction()
+                            .replace(R.id.frameLayout, new SettingsFragment())
+                            .commit();
+                }
             });
         }
 
@@ -323,9 +327,11 @@ public class SettingsFragment extends Fragment {
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
-            GuestRecordStore.clearIfNotToday(requireContext());
-            int guestCount = GuestRecordStore.hasTodayRecord(requireContext()) ? 1 : 0;
-            if (tvTotalDays != null) tvTotalDays.setText(guestCount + "일");
+            if (getContext() != null) {
+                GuestRecordStore.clearIfNotToday(requireContext());
+                int guestCount = GuestRecordStore.hasTodayRecord(requireContext()) ? 1 : 0;
+                if (tvTotalDays != null) tvTotalDays.setText(guestCount + "일");
+            }
             return;
         }
 
@@ -334,12 +340,14 @@ public class SettingsFragment extends Fragment {
                 .collection("daily_records")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (tvTotalDays != null) {
+                    if (isAdded() && tvTotalDays != null) {
                         tvTotalDays.setText(queryDocumentSnapshots.size() + "일");
                     }
                 })
                 .addOnFailureListener(e -> {
-                    if (tvTotalDays != null) tvTotalDays.setText("0일");
+                    if (isAdded() && tvTotalDays != null) {
+                        tvTotalDays.setText("0일");
+                    }
                     android.util.Log.e("SettingsFragment", "기록 수 조회 실패", e);
                 });
     }
