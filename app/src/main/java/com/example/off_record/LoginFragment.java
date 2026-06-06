@@ -82,6 +82,7 @@ public class LoginFragment extends Fragment {
         if (getActivity() == null) return;
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(getActivity(), task -> {
+                    if (!isAdded() || getContext() == null) return;
                     if (task.isSuccessful()) {
                         Toast.makeText(getContext(), "회원가입 성공! 로그인 버튼을 눌러주세요.", Toast.LENGTH_SHORT).show();
                     } else {
@@ -95,6 +96,7 @@ public class LoginFragment extends Fragment {
         if (getActivity() == null) return;
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(getActivity(), task -> {
+                    if (!isAdded() || getContext() == null) return;
                     if (task.isSuccessful()) {
                         Toast.makeText(getContext(), "로그인 성공! 환영합니다.", Toast.LENGTH_SHORT).show();
                         navigateToSettings();
@@ -108,6 +110,7 @@ public class LoginFragment extends Fragment {
         if (getActivity() == null) return;
         mAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(getActivity(), task -> {
+                    if (!isAdded() || getContext() == null) return;
                     if (task.isSuccessful()) {
                         String name = email.contains("test1") ? "사용자 1" : "사용자 2";
                         Toast.makeText(getContext(), name + "님 환영합니다!", Toast.LENGTH_SHORT).show();

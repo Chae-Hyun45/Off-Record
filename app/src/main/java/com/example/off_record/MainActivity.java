@@ -53,6 +53,8 @@ public class MainActivity extends AppCompatActivity {
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
 
+            updateFabPosition(id);
+
             Fragment selected = null;
             if (id == R.id.calendar) {
                 selected = new CalendarFragment();
@@ -62,6 +64,9 @@ public class MainActivity extends AppCompatActivity {
                 selected = new ExtraFragment();
             } else if (id == R.id.settings) {
                 selected = new SettingsFragment();
+            } else if (id == R.id.record) {
+                showEmotionDialog();
+                return true;
             }
 
             if (selected != null) {
@@ -77,7 +82,28 @@ public class MainActivity extends AppCompatActivity {
         // 3. 중앙 FAB(이모지 버튼) 클릭 시 감정 선택 다이얼로그 표시
         ImageButton fabAdd = findViewById(R.id.fabAdd);
         if (fabAdd != null) {
-            fabAdd.setOnClickListener(v -> showEmotionDialog());
+            updateFabPosition(bottomNav.getSelectedItemId());
+            fabAdd.setOnClickListener(v -> {
+                if (bottomNav.getSelectedItemId() == R.id.record) {
+                    showEmotionDialog();
+                } else {
+                    bottomNav.setSelectedItemId(R.id.record);
+                }
+            });
+        }
+    }
+
+    private void updateFabPosition(int itemId) {
+        ImageButton fabAdd = findViewById(R.id.fabAdd);
+        if (fabAdd == null) return;
+
+        float density = getResources().getDisplayMetrics().density;
+        if (itemId == R.id.record) {
+            // 기록 탭이 선택되었을 때 (현재 만족하시는 위치)
+            fabAdd.setTranslationY(5 * density);
+        } else {
+            // 다른 탭이 선택되었을 때 (이모지를 조금 더 아래로 내림)
+            fabAdd.setTranslationY(15 * density);
         }
     }
 
@@ -125,10 +151,6 @@ public class MainActivity extends AppCompatActivity {
                     getSupportFragmentManager().beginTransaction()
                             .replace(R.id.frameLayout, fragment)
                             .commit();
-
-                    if (bottomNav != null) {
-                        // bottomNav.getMenu().findItem(R.id.record).setChecked(true);
-                    }
                 });
             }
         }

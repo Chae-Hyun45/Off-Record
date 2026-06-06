@@ -28,7 +28,7 @@ import java.util.Map;
 public class CalendarFragment extends Fragment {
 
     private TextView selectedDate, detailText, tvRecordStatus, tvScoreChip, tvStressChip, tvQuestionMark;
-    private TextView tvMonthTitle;
+    private TextView tvMonthTitle, tvCalendarTitle;
     private ImageButton btnPrevMonth, btnNextMonth;
     private GridLayout weekGrid, calendarGrid;
     private ImageView selectedEmoji;
@@ -50,6 +50,7 @@ public class CalendarFragment extends Fragment {
 
         db = FirebaseFirestore.getInstance();
 
+        tvCalendarTitle = view.findViewById(R.id.tvCalendarTitle);
         tvMonthTitle = view.findViewById(R.id.tvMonthTitle);
         btnPrevMonth = view.findViewById(R.id.btnPrevMonth);
         btnNextMonth = view.findViewById(R.id.btnNextMonth);
@@ -75,8 +76,31 @@ public class CalendarFragment extends Fragment {
         setupMonthButtons();
         updateDateDisplay(selectedYear, selectedMonth, selectedDay);
         loadRecordedDatesForMonth();
+        updateCalendarTitle();
 
         return view;
+    }
+
+    private void updateCalendarTitle() {
+        if (tvCalendarTitle == null) return;
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            String email = currentUser.getEmail();
+            String name = "";
+            
+            if (email != null && email.contains("@")) {
+                name = email.split("@")[0];
+            } else {
+                name = currentUser.getDisplayName();
+            }
+            
+            if (name == null || name.isEmpty()) {
+                name = "사용자";
+            }
+            tvCalendarTitle.setText(name + "님의 여정");
+        } else {
+            tvCalendarTitle.setText("로그인이 필요합니다");
+        }
     }
 
     private void setupMonthButtons() {
@@ -277,6 +301,7 @@ public class CalendarFragment extends Fragment {
         String uid = currentUser.getUid();
         db.collection("users").document(uid).collection("daily_records").document(dateKey).get()
                 .addOnSuccessListener(documentSnapshot -> {
+                    if (!isAdded()) return;
                     if (documentSnapshot.exists()) {
                         String emotion = documentSnapshot.getString("emotion");
                         Long scoreLong = documentSnapshot.getLong("score");
@@ -289,6 +314,7 @@ public class CalendarFragment extends Fragment {
                     }
                 })
                 .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
                     showEmptyState("기록을 불러오지 못했습니다.");
                     android.util.Log.e("CalendarFragment", "Error fetching record", e);
                 });
