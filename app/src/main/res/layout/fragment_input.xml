@@ -67,7 +67,13 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-<<<<<<< HEAD
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintTop_toTopOf="@id/gl_top"
+        app:layout_constraintBottom_toBottomOf="parent">
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -176,14 +182,52 @@
                 </LinearLayout>
             </RadioGroup>
         </LinearLayout>
+            android:paddingHorizontal="20dp"
+            android:paddingBottom="40dp">
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="15dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout
+            <TextView
+                android:id="@+id/inputDateText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="2026년 4월 29일 수요일"
+                android:textSize="18sp"
+                android:textColor="#555555"
+                android:layout_gravity="center"
+                android:layout_marginBottom="24dp"/>
+
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp"
+                    android:gravity="center">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="선택한 오늘의 기분"
+                        android:textColor="#888888"
+                        android:layout_marginBottom="12dp"/>
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center">
+                        <ImageButton android:id="@+id/btnHappy" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnSmile" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnNeutral" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/three" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnSad" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnAngry" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -214,67 +258,103 @@
             android:layout_marginBottom="16dp">
 
         </androidx.cardview.widget.CardView>
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘 감정에 가장 큰 영향을 준 것은?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
+                    <RadioGroup android:id="@+id/rgInfluence" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbInf1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="📖 학업/과제" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
+                            <RadioButton android:id="@+id/rbInf2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:minHeight="48dp" android:text="🤝 인간관계" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbInf3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🏠 가족" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbInf4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🔋 건강/피로" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                            <RadioButton android:id="@+id/rbInf5" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🚀 진로/미래 걱정" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbInf6" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="✨ 특별한 이유 없음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                    </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="15dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘 피로도는 어떤가요?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
-                <RadioGroup android:id="@+id/rgFatigue" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                        <RadioButton android:id="@+id/rbFatigue1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="전혀 피곤하지 않음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                        <RadioButton android:id="@+id/rbFatigue2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="조금 피곤함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                    </LinearLayout>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                        <RadioButton android:id="@+id/rbFatigue3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="보통" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                        <RadioButton android:id="@+id/rbFatigue4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="많이 피곤함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                    </LinearLayout>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                        <RadioButton android:id="@+id/rbFatigue5" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="완전히 지침" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
-                    </LinearLayout>
-                </RadioGroup>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘 스트레스는 어느 정도였나요?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
+                    <RadioGroup android:id="@+id/rgStress" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbStress1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="거의 없음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbStress2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="조금 있음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbStress3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="보통" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbStress4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="높음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                            <RadioButton android:id="@+id/rbStress5" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="매우 높음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
+                        </LinearLayout>
+                    </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="15dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="어젯밤 수면은 어땠나요?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
-                <RadioGroup android:id="@+id/rgSleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                        <RadioButton android:id="@+id/rbSleep1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="충분히 잠" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                        <RadioButton android:id="@+id/rbSleep2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="조금 부족함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                    </LinearLayout>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
-                        <RadioButton android:id="@+id/rbSleep3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="자주 깸" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                        <RadioButton android:id="@+id/rbSleep4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="거의 못 잠" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-                    </LinearLayout>
-                    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
-                        <RadioButton android:id="@+id/rbSleep5" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="기억나지 않음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
-                    </LinearLayout>
-                </RadioGroup>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘 피로도는 어떤가요?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
+                    <RadioGroup android:id="@+id/rgFatigue" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbFatigue1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="전혀 피곤하지 않음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbFatigue2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="조금 피곤함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbFatigue3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="보통" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbFatigue4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="많이 피곤함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                            <RadioButton android:id="@+id/rbFatigue5" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="완전히 지침" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
+                        </LinearLayout>
+                    </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
-        <androidx.cardview.widget.CardView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:cardCornerRadius="15dp"
-            app:cardElevation="0dp"
-            android:layout_marginBottom="16dp">
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘의 하루는 몇 점인가요?" android:textStyle="bold" android:layout_marginBottom="10dp"/>
-                <SeekBar android:id="@+id/scoreSeekBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="80" android:progressTint="#81C784" android:thumbTint="#4CAF50"/>
-                <TextView android:id="@+id/tvScoreValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="80점" android:layout_gravity="center" android:textColor="#4CAF50" android:textStyle="bold"/>
-            </LinearLayout>
-        </androidx.cardview.widget.CardView>
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="어젯밤 수면은 어땠나요?" android:textStyle="bold" android:layout_marginBottom="12dp"/>
+                    <RadioGroup android:id="@+id/rgSleep" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbSleep1" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="충분히 잠" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbSleep2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="조금 부족함" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginBottom="8dp">
+                            <RadioButton android:id="@+id/rbSleep3" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="자주 깸" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="8dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                            <RadioButton android:id="@+id/rbSleep4" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="거의 못 잠" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
+                        </LinearLayout>
+                        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                            <RadioButton android:id="@+id/rbSleep5" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="48dp" android:text="기억나지 않음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold" android:padding="8dp"/>
+                        </LinearLayout>
+                    </RadioGroup>
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
 
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -289,7 +369,6 @@
                     <CheckBox android:id="@+id/cbLunch" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🌤 점심" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="4dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
                     <CheckBox android:id="@+id/cbDinner" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🌙 저녁" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:layout_marginEnd="4dp" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
                     <CheckBox android:id="@+id/cbLateNight" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="🍕 야식" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
-=======
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -316,7 +395,11 @@
                             <RadioButton android:id="@+id/rbInf6" android:layout_width="0dp" android:layout_weight="1" android:layout_height="48dp" android:text="✨ 특별한 이유 없음" android:button="@null" android:background="@drawable/meal_selector" android:gravity="center" android:textColor="@color/meal_text_color" android:textSize="12sp" android:textStyle="bold"/>
                         </LinearLayout>
                     </RadioGroup>
->>>>>>> ab5bb8d937b4ccd6484981d28d5925874e5e74b3
+
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘의 하루는 몇 점인가요?" android:textStyle="bold" android:layout_marginBottom="10dp"/>
+                    <SeekBar android:id="@+id/scoreSeekBar" android:layout_width="match_parent" android:layout_height="wrap_content" android:max="100" android:progress="80" android:progressTint="#81C784" android:thumbTint="#4CAF50"/>
+                    <TextView android:id="@+id/tvScoreValue" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="80점" android:layout_gravity="center" android:textColor="#4CAF50" android:textStyle="bold"/>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
