@@ -49,6 +49,12 @@ public class InputFragment extends Fragment {
         CheckBox cbDinner = view.findViewById(R.id.cbDinner);
         CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
 
+        TextView inputDateText = view.findViewById(R.id.inputDateText);
+        if (inputDateText != null) {
+            String todayStr = new SimpleDateFormat("yyyy년 MM월 dd일 EEEE", Locale.KOREAN).format(new Date());
+            inputDateText.setText(todayStr);
+        }
+
         rgInfluence = view.findViewById(R.id.rgInfluence);
         rgStress = view.findViewById(R.id.rgStress);
         rgFatigue = view.findViewById(R.id.rgFatigue);
