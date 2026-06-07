@@ -1,38 +1,56 @@
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/app_background">
+    android:background="@drawable/calendar_bg_gradient">
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/gl_top"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.08" />
 
     <ScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:fillViewport="true">
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp"
+        android:background="@android:color/transparent"
+        app:layout_constraintTop_toTopOf="@id/gl_top"
+        app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingLeft="16dp"
-            android:paddingTop="24dp"
-            android:paddingRight="16dp"
-            android:paddingBottom="24dp">
+            android:paddingHorizontal="20dp"
+            android:paddingTop="0dp">
 
-            <androidx.cardview.widget.CardView
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/tvCalendarTitle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="0dp">
+                android:fontFamily="sans-serif-black"
+                android:text="내 여정"
+                android:textColor="@color/text_main"
+                android:textSize="26sp" />
+
+            <!-- Floating Calendar -->
+            <com.google.android.material.card.MaterialCardView
+                style="@style/Widget.OffRecord.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/calendar_panel_bg"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="16dp">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -40,15 +58,13 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <TextView
+                        <ImageButton
                             android:id="@+id/btnPrevMonth"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:gravity="center"
-                            android:text="‹"
-                            android:textColor="#3B3B3B"
-                            android:textSize="30sp"
-                            android:textStyle="bold" />
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@android:drawable/ic_media_previous"
+                            app:tint="@color/text_sub" />
 
                         <TextView
                             android:id="@+id/tvMonthTitle"
@@ -56,66 +72,56 @@
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
                             android:gravity="center"
-                            android:text="2026년 05월"
-                            android:textColor="#242424"
-                            android:textSize="25sp"
-                            android:textStyle="bold" />
+                            android:text="2026년 5월"
+                            android:textColor="@color/text_main"
+                            android:textSize="17sp"
+                            android:fontFamily="sans-serif-medium" />
 
-                        <TextView
+                        <ImageButton
                             android:id="@+id/btnNextMonth"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:gravity="center"
-                            android:text="›"
-                            android:textColor="#3B3B3B"
-                            android:textSize="30sp"
-                            android:textStyle="bold" />
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@android:drawable/ic_media_next"
+                            app:tint="@color/text_sub" />
                     </LinearLayout>
 
                     <GridLayout
                         android:id="@+id/weekGrid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
+                        android:layout_marginTop="20dp"
                         android:columnCount="7" />
 
                     <GridLayout
                         android:id="@+id/calendarGrid"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="6dp"
+                        android:layout_marginTop="8dp"
                         android:columnCount="7" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:gravity="center"
-                        android:orientation="horizontal"/>
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="10dp"
-                android:text="선택 날짜 기록"
-                android:textColor="#2D2D2D"
-                android:textSize="17sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="16dp"
+                android:fontFamily="sans-serif-black"
+                android:text="오늘의 기록"
+                android:textColor="@color/text_main"
+                android:textSize="20sp" />
 
-            <androidx.cardview.widget.CardView
+            <com.google.android.material.card.MaterialCardView
                 android:id="@+id/detailCard"
+                style="@style/Widget.OffRecord.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardBackgroundColor="#FFFFFF"
-                app:cardCornerRadius="24dp"
-                app:cardElevation="0dp">
+                android:layout_marginBottom="24dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/calendar_panel_bg"
                     android:orientation="vertical"
                     android:padding="20dp">
 
@@ -125,29 +131,36 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
-                        <FrameLayout
-                            android:layout_width="66dp"
-                            android:layout_height="66dp">
+                        <com.google.android.material.card.MaterialCardView
+                            android:layout_width="60dp"
+                            android:layout_height="60dp"
+                            app:cardCornerRadius="30dp"
+                            app:cardElevation="0dp"
+                            app:strokeWidth="1dp"
+                            app:strokeColor="@color/border_light">
 
-                            <ImageView
-                                android:id="@+id/selectedEmoji"
+                            <FrameLayout
                                 android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:padding="0dp"
-                                android:scaleType="fitCenter"
-                                android:src="@drawable/three" />
-
-                            <TextView
-                                android:id="@+id/tvQuestionMark"
-                                android:layout_width="match_parent"
-                                android:layout_height="match_parent"
-                                android:gravity="center"
-                                android:text="?"
-                                android:textColor="#6E746E"
-                                android:textSize="34sp"
-                                android:textStyle="bold"
-                                android:visibility="gone" />
-                        </FrameLayout>
+                                android:layout_height="match_parent">
+                                <ImageView
+                                    android:id="@+id/selectedEmoji"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:padding="12dp"
+                                    android:scaleType="fitCenter"
+                                    android:src="@drawable/three" />
+                                <TextView
+                                    android:id="@+id/tvQuestionMark"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="match_parent"
+                                    android:gravity="center"
+                                    android:text="?"
+                                    android:textColor="@color/text_sub"
+                                    android:textSize="24sp"
+                                    android:fontFamily="sans-serif-black"
+                                    android:visibility="gone" />
+                            </FrameLayout>
+                        </com.google.android.material.card.MaterialCardView>
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -160,65 +173,63 @@
                                 android:id="@+id/selectedDate"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="05월 27일"
-                                android:textColor="#252525"
-                                android:textSize="22sp"
-                                android:textStyle="bold" />
+                                android:text="5월 28일"
+                                android:textColor="@color/text_main"
+                                android:textSize="18sp"
+                                android:fontFamily="sans-serif-medium" />
 
                             <TextView
                                 android:id="@+id/tvRecordStatus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:layout_marginTop="4dp"
-                                android:text="기록 없음"
-                                android:textColor="#777777"
+                                android:layout_marginTop="2dp"
+                                android:text="기록됨"
+                                android:textColor="@color/brand_primary"
                                 android:textSize="13sp" />
                         </LinearLayout>
-                    </LinearLayout>
-
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="18dp"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/tvScoreChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/calendar_chip_bg"
-                            android:paddingHorizontal="13dp"
-                            android:paddingVertical="7dp"
-                            android:text="점수 | -"
-                            android:textColor="#555555"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvStressChip"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/calendar_chip_bg"
-                            android:paddingHorizontal="13dp"
-                            android:paddingVertical="7dp"
-                            android:text="스트레스 | -"
-                            android:textColor="#555555"
-                            android:textSize="13sp"
-                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <TextView
                         android:id="@+id/detailText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="16dp"
+                        android:layout_marginTop="20dp"
                         android:lineSpacingExtra="4dp"
-                        android:text="이날의 기록이 여기에 표시됩니다."
-                        android:textColor="#303030"
-                        android:textSize="16sp" />
+                        android:text="여기에 일기 내용이 표시됩니다."
+                        android:textColor="@color/text_main"
+                        android:textSize="15sp" />
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="20dp"
+                        android:background="@color/border_light" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/tvScoreChip"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="점수: 85"
+                            android:textColor="@color/text_sub"
+                            android:textSize="13sp" />
+
+                        <TextView
+                            android:id="@+id/tvStressChip"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="스트레스: 낮음"
+                            android:textColor="@color/text_sub"
+                            android:textSize="13sp" />
+                    </LinearLayout>
                 </LinearLayout>
-            </androidx.cardview.widget.CardView>
+            </com.google.android.material.card.MaterialCardView>
 
         </LinearLayout>
     </ScrollView>

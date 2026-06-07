@@ -2,5 +2,54 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
-    <color name="app_background">#FAFAF7</color>
+
+    <!-- Refined Professional Palette -->
+    <color name="bg_white_pure">#FFFFFF</color>
+    <color name="bg_white_soft">#F8F9FA</color>
+    <color name="surface_card">#FFFFFF</color>
+    
+    <!-- Sophisticated Accents -->
+    <color name="brand_primary">#FFD54F</color> <!-- Keep yellow as a subtle highlight -->
+    <color name="brand_secondary">#343A40</color>
+    
+    <!-- Neutral Greys for Depth and Text -->
+    <color name="text_main">#212529</color>
+    <color name="text_sub">#6C757D</color>
+    <color name="border_light">#E9ECEF</color>
+    
+    <!-- Mood Colors (Refined) -->
+    <color name="mood_1">#6E7371</color>
+    <color name="mood_2">#426E49</color>
+    <color name="mood_3">#83B384</color>
+    <color name="mood_4">#CBDC96</color>
+    <color name="mood_5">#FAE499</color>
+
+    <!-- Selection Colors -->
+    <color name="selected_green_border">#4CAF50</color>
+    <color name="selected_green_bg">#E8F5E9</color>
+
+    <!-- Legacy / Compatibility Tokens (Keep for safety) -->
+    <color name="app_background">#FFFFFF</color>
+    <color name="bg_soft_yellow">#FFFFFF</color>
+    <color name="primary_pastel_yellow">#FFD54F</color>
+    <color name="primary_soft_orange">#FFB74D</color>
+    <color name="text_primary">#212529</color>
+    <color name="text_secondary">#6C757D</color>
+    <color name="bg_soft_cream">#F8F9FA</color>
+    <color name="accent_beige">#E9ECEF</color>
+    <color name="secondary_cream">#F8F9FA</color>
+    <color name="primary_yellow">#FFD54F</color>
+    <color name="text_premium_main">#212529</color>
+    <color name="text_premium_sub">#6C757D</color>
+    <color name="butter_yellow_main">#FFD54F</color>
+    <color name="mint_dark">#FFD54F</color>
+    <color name="mood_happy_3d">#FFD54F</color>
+    <color name="mood_good_3d">#D1C4E9</color>
+    <color name="mood_normal_3d">#E1BEE7</color>
+    <color name="mood_tired_3d">#F8BBD0</color>
+    <color name="mood_angry_3d">#FFCDD2</color>
+    <color name="liquid_gold">#FFD54F</color>
+    <color name="shadow_dark">#E9ECEF</color>
+    <color name="shadow_light">#FFFFFF</color>
+    <color name="bg_cream_ivory">#FFFFFF</color>
 </resources>

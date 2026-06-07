@@ -1,7 +1,19 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.OffRecord" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
-        <!-- <item name="colorPrimary">@color/my_dark_primary</item> -->
+    <style name="Base.Theme.OffRecord" parent="Theme.Material3.Light.NoActionBar">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:navigationBarColor">@color/app_background</item>
+        <item name="android:colorAccent">#6F8F72</item>
+        <item name="colorPrimary">#6F8F72</item>
+        <item name="colorPrimaryContainer">#E3EFE5</item>
+        <item name="colorSecondary">#85B785</item>
+        <item name="android:fontFamily">sans</item>
     </style>
+
+    <style name="MyMaterialTimePickerTheme" parent="Theme.Material3.Light.Dialog">
+        <item name="android:forceDarkAllowed">false</item>
+        <item name="colorPrimary">#6F8F72</item>
+    </style>
+
+    <style name="Theme.OffRecord" parent="Base.Theme.OffRecord" />
 </resources>
