@@ -102,7 +102,7 @@ public class ExtraFragment extends Fragment {
                         itemView.setFocusable(true);
                         itemView.setOnClickListener(v -> {
                             // 상세 화면으로 전달할 데이터를 생성 (기존 방식 호환을 위해 포맷팅)
-                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                                     fullDate,
                                     emotion,
                                     score,
@@ -113,7 +113,8 @@ public class ExtraFragment extends Fragment {
                                     doc.getString("fatigue"),
                                     doc.getString("sleep"),
                                     doc.getString("need"),
-                                    doc.getString("feedback")
+                                    doc.getString("feedback"),
+                                    doc.getString("resultText")
                             );
 
                             RecordDetailFragment fragment = new RecordDetailFragment();

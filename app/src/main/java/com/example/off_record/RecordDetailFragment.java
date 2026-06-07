@@ -32,6 +32,7 @@ public class RecordDetailFragment extends Fragment {
         TextView tvDetailDiary = view.findViewById(R.id.tvDetailDiary);
         TextView tvDetailScore = view.findViewById(R.id.tvDetailScore);
         TextView tvDetailEmotionName = view.findViewById(R.id.tvDetailEmotionName);
+        TextView tvResultView = view.findViewById(R.id.tvResultView);
         LinearLayout detailContainer = view.findViewById(R.id.detailContainer);
 
         btnBack.setOnClickListener(v -> {
@@ -39,6 +40,8 @@ public class RecordDetailFragment extends Fragment {
                 getParentFragmentManager().popBackStack();
             }
         });
+
+        android.util.Log.d("RecordDetailFragment", "record: " + record);
 
         String[] detail = record.split("\\|", -1);
 
@@ -54,6 +57,7 @@ public class RecordDetailFragment extends Fragment {
             String sleep = safeGet(detail, 8);
             String need = safeGet(detail, 9);
             String feedback = safeGet(detail, 10);
+            String resultText = safeGet(detail, 11);
 
             ivDetailEmoji.setImageResource(getEmojiImage(emotionCode));
             tvDetailEmotionName.setText(getEmotionName(emotionCode));
@@ -70,6 +74,9 @@ public class RecordDetailFragment extends Fragment {
             addInfoRow(detailContainer, "필요한 것", need);
             addInfoRow(detailContainer, "원하는 피드백", feedback);
             addInfoRow(detailContainer, "식사", meal);
+            if (tvResultView != null) {
+                tvResultView.setText(resultText.isEmpty() ? "일기를 불러올 수 없습니다." : resultText);
+            }
         } else {
             tvDetailDate.setText("기록을 불러올 수 없습니다");
             tvDetailTime.setText("");
@@ -77,6 +84,7 @@ public class RecordDetailFragment extends Fragment {
             tvDetailScore.setText("-점");
             detailContainer.removeAllViews();
         }
+
 
         return view;
     }
