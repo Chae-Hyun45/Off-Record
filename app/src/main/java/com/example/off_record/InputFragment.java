@@ -167,6 +167,7 @@ public class InputFragment extends Fragment {
                     aiRoll = "너는 복잡한 생각을 한 번에 정리해 주는 '통찰력 있는 인생 멘토'야. 군더더기 없이 오늘 하루를 관통하는 짧고 강렬한 응원과 뼈 때리는 문장 한 마디만 남겨줘.";
                 }else{
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
+                }
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
                         fullTime,
                         selectedEmotion,
@@ -193,8 +194,8 @@ public class InputFragment extends Fragment {
                 editor.putString("all_records", newRecord + "##" + updatedList.toString());
                 editor.apply();
 
-                // Firestore에 데이터 저장
-                saveToFirestore(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
+                // Firestore 또는 GuestRecordStore에 데이터 저장
+                saveRecord(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString(), "AI 분석 중...");
 
                 if (getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
@@ -232,14 +233,13 @@ public class InputFragment extends Fragment {
                 );
                 // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
                 askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
-                // Firestore에 데이터 저장
             });
         }
 
         return view;
     }
 
-    private void saveToFirestore(String fullTime, String mealInfo, int score, String diary, String resultText) {
+    private void saveRecord(String fullTime, String mealInfo, int score, String diary, String resultText) {
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
         record.put("emotion", selectedEmotion);
@@ -257,17 +257,25 @@ public class InputFragment extends Fragment {
         // 날짜를 문서 ID로 사용하여 하루에 하나의 기록만 저장 (또는 덮어쓰기)
         String dateId = fullTime.split(" ")[0];
 
-        db.collection("daily_records")
-                .document(dateId)
-                .set(record)
-                .addOnSuccessListener(aVoid -> {
-                    if (getContext() != null) {
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser != null) {
+            String uid = currentUser.getUid();
+            db.collection("users")
+                    .document(uid)
+                    .collection("daily_records")
+                    .document(dateId)
+                    .set(record)
+                    .addOnSuccessListener(aVoid -> {
                         android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
-                    }
-                })
-                .addOnFailureListener(e -> {
-                    android.util.Log.w("Firestore", "기록 저장 실패", e);
-                });
+                    })
+                    .addOnFailureListener(e -> {
+                        android.util.Log.w("Firestore", "기록 저장 실패", e);
+                    });
+        } else {
+            // 게스트 모드: GuestRecordStore에 저장
+            GuestRecordStore.saveTodayRecord(getContext(), record, dateId);
+            android.util.Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
+        }
     }
 
     private void setupToggleableRadioGroup(RadioGroup radioGroup) {
@@ -433,8 +441,8 @@ public class InputFragment extends Fragment {
                 String resultText = result.getText(); // AI 답변 추출
 
 
-                // 3. AI 답변을 포함하여 Firestore에 최종 저장
-                saveToFirestore(fullTime, mealInfo, score, diary, resultText);
+                // 3. AI 답변을 포함하여 최종 저장
+                saveRecord(fullTime, mealInfo, score, diary, resultText);
 
                 // 4. 하단 네비게이션을 통해 화면 이동
                 if (getActivity() != null) {
