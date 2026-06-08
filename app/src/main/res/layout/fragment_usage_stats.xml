@@ -2,75 +2,286 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F8FAFC"
-    android:fillViewport="true">
+    android:background="@drawable/usage_page_bg"
+    android:fillViewport="true"
+    android:overScrollMode="never">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:paddingStart="18dp"
+        android:paddingTop="24dp"
+        android:paddingEnd="18dp"
+        android:paddingBottom="30dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="32dp">
+            android:layout_height="56dp"
+            android:layout_marginBottom="12dp">
+
+            <TextView
+                android:id="@+id/btnBackUsage"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:background="@drawable/usage_top_button_bg"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:text="‹"
+                android:textColor="#141414"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📊 스마트폰 사용 리포트"
+                android:layout_centerInParent="true"
+                android:text="스마트폰 사용 리포트"
+                android:textColor="#141414"
                 android:textSize="22sp"
-                android:textStyle="bold"
-                android:textColor="#1E293B"/>
+                android:textStyle="bold" />
         </RelativeLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="@drawable/usage_card_bg"
             android:orientation="vertical"
-            android:background="#FFFFFF"
-            android:padding="20dp"
-            android:layout_marginBottom="24dp"
-            android:elevation="2dp">
+            android:padding="20dp">
+
             <TextView
+                android:id="@+id/tvWeekBadge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="오늘 순수 화면 켠 시간 (스크린 타임)"
-                android:textSize="14sp"
-                android:textColor="#64748B"
-                android:layout_marginBottom="8dp"/>
+                android:text="✨ 이번 주"
+                android:textColor="#6F7280"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
             <TextView
-                android:id="@+id/tvTotalTimeResult"
+                android:id="@+id/tvWeeklyTotal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
                 android:text="0분"
-                android:textSize="28sp"
-                android:textStyle="bold"
-                android:textColor="#4F46E5"/>
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:background="#FFFFFF"
-            android:padding="20dp"
-            android:elevation="2dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📱 오늘 사용한 앱 목록"
-                android:textSize="16sp"
-                android:textStyle="bold"
-                android:textColor="#1E293B"
-                android:layout_marginBottom="16dp"/>
+                android:textColor="#141414"
+                android:textSize="40sp"
+                android:textStyle="bold" />
 
             <LinearLayout
-                android:id="@+id/llAppList"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:orientation="vertical" />
+                android:layout_marginTop="18dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnPrevWeek"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/usage_top_button_bg"
+                    android:gravity="center"
+                    android:text="‹"
+                    android:textColor="#141414"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvWeekRange"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="6월 2일 - 6월 8일"
+                        android:textColor="#737684"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:text="·"
+                        android:textColor="#C2C5CF"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/tvDailyAverage"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="일 평균 0분"
+                        android:textColor="#737684"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/btnNextWeek"
+                    android:layout_width="44dp"
+                    android:layout_height="44dp"
+                    android:background="@drawable/usage_top_button_bg"
+                    android:gravity="center"
+                    android:text="›"
+                    android:textColor="#141414"
+                    android:textSize="24sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/llWeeklyChart"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="22dp"
+                android:gravity="bottom"
+                android:orientation="horizontal" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="18dp"
+                android:background="#ECEEF3" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/usage_chip_social_bg"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="소셜 미디어"
+                        android:textColor="#2979FF"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvSocialTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="0분"
+                        android:textColor="#141414"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/usage_chip_entertainment_bg"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="엔터테인먼트"
+                        android:textColor="#18C6C8"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvEntertainmentTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="0분"
+                        android:textColor="#141414"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/usage_chip_shopping_bg"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="쇼핑 및 음식"
+                        android:textColor="#FF8A20"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvShoppingTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="6dp"
+                        android:text="0분"
+                        android:textColor="#141414"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
         </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvUpdatedAt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="14dp"
+            android:text="오늘 오후 7:14에 업데이트됨"
+            android:textColor="#7A7D89"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tvSelectedDayTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:text="오늘 사용 앱"
+            android:textColor="#141414"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/llAppList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/usage_card_bg"
+            android:orientation="vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="14dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="14dp" />
+
     </LinearLayout>
 </ScrollView>

@@ -374,11 +374,11 @@ public class StatsFragment extends Fragment {
     }
 
     private String getMoodTextForScore(float score) {
-        if (score <= 1.5f) return "아주 좋음";
-        if (score <= 2.5f) return "좋음";
-        if (score <= 3.5f) return "평범";
-        if (score <= 4.5f) return "지침";
-        return "화남/힘듦";
+        if (score <= 1.5f) return "매우 안 좋아요";
+        if (score <= 2.5f) return "안 좋아요";
+        if (score <= 3.5f) return "보통이에요";
+        if (score <= 4.5f) return "좋아요";
+        return "매우 좋아요";
     }
 
     private void loadDiaryDataFromServer() {
@@ -438,11 +438,11 @@ public class StatsFragment extends Fragment {
     private float emotionToMoodScore(String emotion) {
         if (emotion == null) return 3.0f;
         switch (emotion) {
-            case "emo1": return 1.0f;
-            case "emo2": return 2.0f;
-            case "emo3": return 3.0f;
-            case "emo4": return 4.0f;
-            case "emo5": return 5.0f;
+            case "매우_안좋아요": return 1.0f;
+            case "안좋아요": return 2.0f;
+            case "보통이에요": return 3.0f;
+            case "좋아요": return 4.0f;
+            case "매우_좋아요": return 5.0f;
             default: return 3.0f;
         }
     }
@@ -498,4 +498,42 @@ public class StatsFragment extends Fragment {
         cal.set(Calendar.SECOND, 0);
         cal.set(Calendar.MILLISECOND, 0);
     }
+
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private int getEmotionScore(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return 1;
+        if ("안좋아요".equals(value)) return 2;
+        if ("보통이에요".equals(value)) return 3;
+        if ("좋아요".equals(value)) return 4;
+        if ("매우_좋아요".equals(value)) return 5;
+
+        return 0;
+    }
+
 }

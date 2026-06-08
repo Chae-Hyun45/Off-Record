@@ -134,8 +134,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         int[] emojiIds = {R.id.emo1, R.id.emo2, R.id.emo3, R.id.emo4, R.id.emo5};
+        String[] emotionValues = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
-        for (int id : emojiIds) {
+        for (int i = 0; i < emojiIds.length; i++) {
+            int id = emojiIds[i];
+            String emotionValue = emotionValues[i];
+
             View btn = dialog.findViewById(id);
             if (btn != null) {
                 btn.setOnClickListener(v -> {
@@ -144,8 +148,7 @@ public class MainActivity extends AppCompatActivity {
                     InputFragment fragment = new InputFragment();
                     Bundle bundle = new Bundle();
 
-                    String emotionKey = getResources().getResourceEntryName(id);
-                    bundle.putString("selected_emotion", emotionKey);
+                    bundle.putString("selected_emotion", emotionValue);
                     fragment.setArguments(bundle);
 
                     getSupportFragmentManager().beginTransaction()

@@ -3,10 +3,15 @@
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:navigationBarColor">@color/app_background</item>
-        <item name="android:colorAccent">#6F8F72</item>
-        <item name="colorPrimary">#6F8F72</item>
-        <item name="colorPrimaryContainer">#E3EFE5</item>
-        <item name="colorSecondary">#85B785</item>
+
+        <!-- Bottom nav active indicator & general accent -->
+        <item name="android:colorAccent">#F6E27A</item>
+        <item name="colorPrimary">#F6E27A</item>
+        <item name="colorPrimaryContainer">#FFF3B3</item>
+        <item name="colorSecondary">#E8C84E</item>
+        <item name="colorSecondaryContainer">#F6E27A</item>
+        <item name="colorOnSecondaryContainer">#5E4B00</item>
+
         <item name="android:fontFamily">sans</item>
     </style>
 
@@ -17,7 +22,6 @@
 
     <style name="Theme.OffRecord" parent="Base.Theme.OffRecord" />
 
-    <!-- Custom Styles -->
     <style name="Widget.OffRecord.Card" parent="Widget.Material3.CardView.Elevated">
         <item name="cardBackgroundColor">@color/surface_card</item>
         <item name="cardCornerRadius">24dp</item>

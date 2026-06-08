@@ -153,7 +153,16 @@ public class InputFragment extends Fragment {
                         + (cbDinner.isChecked() ? "저녁 " : "")
                         + (cbLateNight.isChecked() ? "야식" : "");
 
+                String influenceValue = getSelectedText(rgInfluence);
+                String stressValue = getSelectedText(rgStress);
+                String fatigueValue = getSelectedText(rgFatigue);
+                String sleepValue = getSelectedText(rgSleep);
+                String needValue = getSelectedText(rgNeed);
                 String feedbackValue = getSelectedText(rgFeedback);
+                String diaryValue = etDiary.getText().toString();
+                selectedEmotion = normalizeEmotionValue(selectedEmotion);
+                String emotionLabel = getEmotionLabel(selectedEmotion);
+
                 String aiRoll = "";
                 if(feedbackValue.equals("공감형 피드백")){
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
@@ -168,18 +177,48 @@ public class InputFragment extends Fragment {
                 }else{
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
                 }
+
+                String customPrompt = String.format(
+                        "%s\n\n" +
+                                "지금 보내주는 정보는 나의 오늘 하루 데이터야. 너는 이 데이터들을 면밀히 분석해서 말해줘. " +
+                                "글은 약 400자 미만이면 좋겠어. 꼭 400자를 꽉 채울 필요는 없고, 필요한 만큼 자연스럽게 작성해줘.\n\n" +
+                                "[오늘의 데이터]\n" +
+                                "- 선택한 감정: %s\n" +
+                                "- 컨디션 점수: %d점\n" +
+                                "- 먹은 식사: %s\n" +
+                                "- 오늘 감정에 가장 큰 영향을 준 것: %s\n" +
+                                "- 스트레스 정도: %s\n" +
+                                "- 피로도: %s\n" +
+                                "- 수면 상태: %s\n" +
+                                "- 지금 나에게 필요한 것: %s\n" +
+                                "- 내가 원하는 피드백 방식: %s\n" +
+                                "- 오늘 나의 이야기: %s\n\n" +
+                                "위 데이터를 모두 반영해서 분석해줘. 특히 내가 원하는 피드백 방식에 맞춰서 답변해줘.",
+                        aiRoll,
+                        emotionLabel,
+                        seekBar.getProgress(),
+                        mealInfo.trim().isEmpty() ? "모두 거름" : mealInfo.trim(),
+                        influenceValue,
+                        stressValue,
+                        fatigueValue,
+                        sleepValue,
+                        needValue,
+                        feedbackValue,
+                        diaryValue
+                );
+
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
                         fullTime,
                         selectedEmotion,
                         seekBar.getProgress(),
-                        etDiary.getText().toString(),
+                        diaryValue,
                         mealInfo,
-                        getSelectedText(rgInfluence),
-                        getSelectedText(rgStress),
-                        getSelectedText(rgFatigue),
-                        getSelectedText(rgSleep),
-                        getSelectedText(rgNeed),
-                        getSelectedText(rgFeedback));
+                        influenceValue,
+                        stressValue,
+                        fatigueValue,
+                        sleepValue,
+                        needValue,
+                        feedbackValue);
 
                 SharedPreferences.Editor editor = pref.edit();
                 String oldRecords = pref.getString("all_records", "");
@@ -195,7 +234,7 @@ public class InputFragment extends Fragment {
                 editor.apply();
 
                 // Firestore 또는 GuestRecordStore에 데이터 저장
-                saveRecord(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString(), "AI 분석 중...");
+                saveRecord(fullTime, mealInfo, seekBar.getProgress(), diaryValue, "AI 분석 중...");
 
                 if (getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
@@ -204,35 +243,7 @@ public class InputFragment extends Fragment {
                     }
                 }
 
-                String customPrompt = String.format(
-                        "%s" +
-                                "지금 보내주는 정보는 나의 오늘 하루 데이터야. 너는 이 데이터들을 면밀히 분석해서 말해줘"+
-                                "글은 약 400자 미민아었으면 좋겠어. 그렇다고 꼭 400자를 꽉 채울 필요는 없어. 글의 길이는 너의 필요에 따라 변경해도 괜찮아" +
-                                "\n\n" +
-                                "[오늘의 데이터]\n" +
-                                "- 선택한 감정: %s (참고: emo1은 가장 슬픔, emo5는 가장 행복)\n" +
-                                "- 컨디션 점수: %s점\n" +
-                                "- 먹은 식사: %s\n" +
-                                "- 오늘 감정에 가장 큰 영향을준 것: %s\n" +
-                                "- 스트레스 정도: %s\n" +
-                                "- 피로도: %s\n" +
-                                "- 수면 상태: %s\n" +
-                                "- 지금 나에게 필요한 것: %s\n" +
-                                "- 오늘 나의 이야기: %s\n\n" +
-                                "이 모든 정보를 종합해서 분석해줘. 특히 \"내가 받고 싶은 피드백\"은 꼭 맞춰줘야해.",
-                        aiRoll,
-                        selectedEmotion,
-                        tvScoreValue.getText().toString(),
-                        mealInfo.isEmpty() ? "모두 거름" : mealInfo,
-                        getSelectedText(rgInfluence),
-                        getSelectedText(rgStress),
-                        getSelectedText(rgFatigue),
-                        getSelectedText(rgSleep),
-                        getSelectedText(rgNeed),
-                        etDiary.getText().toString()
-                );
-                // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
-                askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
+                askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), diaryValue);
             });
         }
 
@@ -242,7 +253,10 @@ public class InputFragment extends Fragment {
     private void saveRecord(String fullTime, String mealInfo, int score, String diary, String resultText) {
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
-        record.put("emotion", selectedEmotion);
+        String normalizedEmotion = normalizeEmotionValue(selectedEmotion);
+        record.put("emotion", normalizedEmotion);
+        record.put("emotionLabel", getEmotionLabel(normalizedEmotion));
+        record.put("emotionScore", getEmotionScore(normalizedEmotion));
         record.put("score", score);
         record.put("diary", diary);
         record.put("meals", mealInfo);
@@ -374,7 +388,7 @@ public class InputFragment extends Fragment {
 
     private void setupEmotionSelection(View view) {
         int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
-        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+        String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
             final String code = codes[i];
@@ -391,7 +405,7 @@ public class InputFragment extends Fragment {
 
     private void updateEmotionHighlight(View view) {
         int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
-        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+        String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
             ImageButton button = view.findViewById(resIds[i]);
@@ -426,6 +440,45 @@ public class InputFragment extends Fragment {
                 }
             });
         }
+    }
+
+
+
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private int getEmotionScore(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return 1;
+        if ("안좋아요".equals(value)) return 2;
+        if ("보통이에요".equals(value)) return 3;
+        if ("좋아요".equals(value)) return 4;
+        if ("매우_좋아요".equals(value)) return 5;
+
+        return 0;
     }
 
     private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {

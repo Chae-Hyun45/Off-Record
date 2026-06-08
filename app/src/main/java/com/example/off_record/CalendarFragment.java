@@ -325,7 +325,7 @@ public class CalendarFragment extends Fragment {
         if (score == null || score.isEmpty()) score = "-";
 
         showRecordEmoji(emotion);
-        tvRecordStatus.setText("감정 기록");
+        tvRecordStatus.setText(getEmotionLabel(emotion) + " | " + formatScore(score));
         tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
         tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         tvScoreChip.setText("점수 | " + score + "점");
@@ -337,6 +337,42 @@ public class CalendarFragment extends Fragment {
         selectedEmoji.setVisibility(View.VISIBLE);
         tvQuestionMark.setVisibility(View.GONE);
         selectedEmoji.setImageResource(getEmojiImage(emotion));
+    }
+
+
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private String formatScore(String score) {
+        if (score == null || score.trim().isEmpty() || "-".equals(score.trim())) {
+            return "-";
+        }
+
+        String value = score.trim();
+        if (value.endsWith("점")) return value;
+        return value + "점";
     }
 
     private void showEmptyState(String message) {
@@ -351,14 +387,14 @@ public class CalendarFragment extends Fragment {
     }
 
     private int getEmotionFaceColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#E3EFE5");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#6F7573"); // one.png 얼굴색
-            case "emo2": return Color.parseColor("#45714D"); // two.png 얼굴색
-            case "emo3": return Color.parseColor("#85B785"); // three.png 얼굴색
-            case "emo4": return Color.parseColor("#CDE099"); // four.png 얼굴색
-            case "emo5": return Color.parseColor("#FEE99C"); // five.png 얼굴색
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#6F7573");
+            case "안좋아요": return Color.parseColor("#45714D");
+            case "보통이에요": return Color.parseColor("#85B785");
+            case "좋아요": return Color.parseColor("#CDE099");
+            case "매우_좋아요": return Color.parseColor("#FEE99C");
             default: return Color.parseColor("#E3EFE5");
         }
     }
@@ -368,40 +404,40 @@ public class CalendarFragment extends Fragment {
     }
 
     private int getEmotionStrokeColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#8B918B");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#D8BE4F");
-            case "emo2": return Color.parseColor("#97B85F");
-            case "emo3": return Color.parseColor("#4F965C");
-            case "emo4": return Color.parseColor("#2F5F3B");
-            case "emo5": return Color.parseColor("#555D5A");
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#555D5A");
+            case "안좋아요": return Color.parseColor("#2F5F3B");
+            case "보통이에요": return Color.parseColor("#4F965C");
+            case "좋아요": return Color.parseColor("#97B85F");
+            case "매우_좋아요": return Color.parseColor("#D8BE4F");
             default: return Color.parseColor("#8B918B");
         }
     }
 
     private int getEmotionStatusColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#2F4637");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#C9A93C");
-            case "emo2": return Color.parseColor("#7EA052");
-            case "emo3": return Color.parseColor("#4F965C");
-            case "emo4": return Color.parseColor("#3C7852");
-            case "emo5": return Color.parseColor("#6F7573");
-            default: return Color.parseColor("#2F4637");
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#6F7573");
+            case "안좋아요": return Color.parseColor("#45714D");
+            case "보통이에요": return Color.parseColor("#4F965C");
+            case "좋아요": return Color.parseColor("#7EA052");
+            case "매우_좋아요": return Color.parseColor("#C9A93C");
+            default: return Color.parseColor("#777777");
         }
     }
 
     private int getEmojiImage(String emotionCode) {
-        if (emotionCode == null) return R.drawable.three;
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return R.drawable.one;
-            case "emo2": return R.drawable.two;
-            case "emo3": return R.drawable.three;
-            case "emo4": return R.drawable.four;
-            case "emo5": return R.drawable.five;
+        switch (emotion) {
+            case "매우_안좋아요": return R.drawable.one;
+            case "안좋아요": return R.drawable.two;
+            case "보통이에요": return R.drawable.three;
+            case "좋아요": return R.drawable.four;
+            case "매우_좋아요": return R.drawable.five;
             default: return R.drawable.three;
         }
     }

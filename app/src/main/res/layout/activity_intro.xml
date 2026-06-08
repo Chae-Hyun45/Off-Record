@@ -28,9 +28,9 @@
                 android:id="@+id/introImage"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:padding="28dp"
+                android:padding="3dp"
                 android:scaleType="fitCenter"
-                android:src="@drawable/three" />
+                android:src="@drawable/five" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView
