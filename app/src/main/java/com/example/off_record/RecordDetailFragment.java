@@ -11,7 +11,6 @@ import android.widget.TextView;
 
 import androidx.fragment.app.Fragment;
 
-
 public class RecordDetailFragment extends Fragment {
 
     private String record = "";
@@ -19,7 +18,6 @@ public class RecordDetailFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_record_detail, container, false);
-
 
         if (getArguments() != null) {
             record = getArguments().getString("record", "");
@@ -40,8 +38,6 @@ public class RecordDetailFragment extends Fragment {
                 getParentFragmentManager().popBackStack();
             }
         });
-
-        android.util.Log.d("RecordDetailFragment", "record: " + record);
 
         String[] detail = record.split("\\|", -1);
 
@@ -74,17 +70,22 @@ public class RecordDetailFragment extends Fragment {
             addInfoRow(detailContainer, "필요한 것", need);
             addInfoRow(detailContainer, "원하는 피드백", feedback);
             addInfoRow(detailContainer, "식사", meal);
+
             if (tvResultView != null) {
-                tvResultView.setText(resultText.isEmpty() ? "일기를 불러올 수 없습니다." : resultText);
+                tvResultView.setText(resultText.isEmpty()
+                        ? "아직 AI 피드백이 생성되지 않았어요."
+                        : resultText);
             }
         } else {
             tvDetailDate.setText("기록을 불러올 수 없습니다");
             tvDetailTime.setText("");
             tvDetailDiary.setText("저장된 기록 형식이 올바르지 않습니다.");
             tvDetailScore.setText("-점");
+            if (tvResultView != null) {
+                tvResultView.setText("AI 피드백을 불러올 수 없습니다.");
+            }
             detailContainer.removeAllViews();
         }
-
 
         return view;
     }
@@ -133,21 +134,55 @@ public class RecordDetailFragment extends Fragment {
         return "기록 상세";
     }
 
-    private String getEmotionName(String emotionCode) {
-        if ("emo1".equals(emotionCode)) return "불편함";
-        if ("emo2".equals(emotionCode)) return "우울함";
-        if ("emo3".equals(emotionCode)) return "보통";
-        if ("emo4".equals(emotionCode)) return "좋음";
-        if ("emo5".equals(emotionCode)) return "매우 좋음";
+
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
         return "감정 미선택";
     }
 
+    private int getEmotionScore(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return 1;
+        if ("안좋아요".equals(value)) return 2;
+        if ("보통이에요".equals(value)) return 3;
+        if ("좋아요".equals(value)) return 4;
+        if ("매우_좋아요".equals(value)) return 5;
+
+        return 0;
+    }
+
+    private String getEmotionName(String emotionValue) {
+        return getEmotionLabel(emotionValue);
+    }
+
     private int getEmojiImage(String emotionCode) {
-        if ("emo1".equals(emotionCode)) return R.drawable.one;
-        if ("emo2".equals(emotionCode)) return R.drawable.two;
-        if ("emo3".equals(emotionCode)) return R.drawable.three;
-        if ("emo4".equals(emotionCode)) return R.drawable.four;
-        if ("emo5".equals(emotionCode)) return R.drawable.five;
+        emotionCode = normalizeEmotionValue(emotionCode);
+        if ("매우_안좋아요".equals(emotionCode)) return R.drawable.one;
+        if ("안좋아요".equals(emotionCode)) return R.drawable.two;
+        if ("보통이에요".equals(emotionCode)) return R.drawable.three;
+        if ("좋아요".equals(emotionCode)) return R.drawable.four;
+        if ("매우_좋아요".equals(emotionCode)) return R.drawable.five;
         return R.drawable.three;
     }
 }
