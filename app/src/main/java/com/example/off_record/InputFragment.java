@@ -207,7 +207,7 @@ public class InputFragment extends Fragment {
                         diaryValue
                 );
 
-                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
+                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%d",
                         fullTime,
                         selectedEmotion,
                         seekBar.getProgress(),
@@ -218,7 +218,9 @@ public class InputFragment extends Fragment {
                         fatigueValue,
                         sleepValue,
                         needValue,
-                        feedbackValue);
+                        feedbackValue,
+                        "AI 분석 중...",
+                        getEmotionScore(selectedEmotion));
 
                 SharedPreferences.Editor editor = pref.edit();
                 String oldRecords = pref.getString("all_records", "");
@@ -387,24 +389,21 @@ public class InputFragment extends Fragment {
     }
 
     private void setupEmotionSelection(View view) {
-        int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
+        int[] resIds = {R.id.btnAngry, R.id.btnSad, R.id.btnNeutral, R.id.btnSmile, R.id.btnHappy};
         String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
             final String code = codes[i];
             ImageButton button = view.findViewById(resIds[i]);
-
-            if (button != null) {
-                button.setOnClickListener(v -> {
-                    selectedEmotion = code;
-                    updateEmotionHighlight(view);
-                });
-            }
+            button.setOnClickListener(v -> {
+                selectedEmotion = code;
+                updateEmotionHighlight(view);
+            });
         }
     }
 
     private void updateEmotionHighlight(View view) {
-        int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
+        int[] resIds = {R.id.btnAngry, R.id.btnSad, R.id.btnNeutral, R.id.btnSmile, R.id.btnHappy};
         String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
@@ -441,8 +440,6 @@ public class InputFragment extends Fragment {
             });
         }
     }
-
-
 
     private String normalizeEmotionValue(String emotionValue) {
         if (emotionValue == null) return "";
@@ -493,15 +490,12 @@ public class InputFragment extends Fragment {
             public void onSuccess(GenerateContentResponse result) {
                 String resultText = result.getText(); // AI 답변 추출
 
-
-                // 3. AI 답변을 포함하여 최종 저장
                 saveRecord(fullTime, mealInfo, score, diary, resultText);
 
-                // 4. 하단 네비게이션을 통해 화면 이동
                 if (getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
                     if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra); // 기록 확인 화면으로 이동
+                        bottomNav.setSelectedItemId(R.id.extra);
                     }
                 }
             }
@@ -511,14 +505,5 @@ public class InputFragment extends Fragment {
                 Log.e("Gemini", "에러 발생: " + t.getMessage());
             }
         }, executor);
-    }
-
-    private void navigateToExtra(){
-        if (getActivity() != null) {
-            BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-            if (bottomNav != null) {
-                bottomNav.setSelectedItemId(R.id.extra);
-            }
-        }
     }
 }

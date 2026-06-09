@@ -59,11 +59,11 @@
                         android:layout_height="wrap_content"
                         android:orientation="horizontal"
                         android:gravity="center">
-                        <ImageButton android:id="@+id/btnHappy" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
-                        <ImageButton android:id="@+id/btnSmile" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnAngry" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/one" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnSad" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/two" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
                         <ImageButton android:id="@+id/btnNeutral" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/three" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
-                        <ImageButton android:id="@+id/btnSad" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
-                        <ImageButton android:id="@+id/btnAngry" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnSmile" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/four" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
+                        <ImageButton android:id="@+id/btnHappy" android:layout_width="55dp" android:layout_height="55dp" android:src="@drawable/five" android:background="?attr/selectableItemBackgroundBorderless" android:scaleType="fitCenter" android:padding="5dp"/>
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
