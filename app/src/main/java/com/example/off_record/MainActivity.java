@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     BottomNavigationView bottomNav;
     FirebaseFirestore db;
+    private long backPressedTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -90,6 +92,23 @@ public class MainActivity extends AppCompatActivity {
                     bottomNav.setSelectedItemId(R.id.record);
                 }
             });
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        // 프래그먼트 백스택이 있으면 (예: 캘린더 상세화면) 이전 화면으로 이동
+        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            super.onBackPressed();
+        } else {
+            // 루트 화면(캘린더, 통계 등)인 경우 두 번 눌러 종료
+            if (System.currentTimeMillis() - backPressedTime < 2000) {
+                super.onBackPressed();
+                finish();
+            } else {
+                backPressedTime = System.currentTimeMillis();
+                Toast.makeText(this, "뒤로가기를 한 번 더 누르시면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 

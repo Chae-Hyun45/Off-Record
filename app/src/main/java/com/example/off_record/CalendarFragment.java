@@ -286,12 +286,7 @@ public class CalendarFragment extends Fragment {
             GuestRecordStore.clearIfNotToday(requireContext());
             Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
             if (guestRecord != null && dateKey.equals(String.valueOf(guestRecord.get("date")))) {
-                showRecordDetail(
-                        String.valueOf(guestRecord.get("emotion")),
-                        String.valueOf(guestRecord.get("score")),
-                        String.valueOf(guestRecord.get("diary")),
-                        String.valueOf(guestRecord.get("stress"))
-                );
+                showRecordDetail(guestRecord, dateKey);
             } else {
                 showEmptyState("게스트 기록은 오늘 하루 기록만 볼 수 있습니다.");
             }
@@ -303,12 +298,7 @@ public class CalendarFragment extends Fragment {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (!isAdded()) return;
                     if (documentSnapshot.exists()) {
-                        String emotion = documentSnapshot.getString("emotion");
-                        Long scoreLong = documentSnapshot.getLong("score");
-                        String score = (scoreLong != null) ? String.valueOf(scoreLong) : "-";
-                        String diary = documentSnapshot.getString("diary");
-                        String stress = documentSnapshot.getString("stress");
-                        showRecordDetail(emotion, score, diary, stress);
+                        showRecordDetail(documentSnapshot.getData(), dateKey);
                     } else {
                         showEmptyState("이날의 기록이 없습니다.");
                     }
@@ -320,17 +310,60 @@ public class CalendarFragment extends Fragment {
                 });
     }
 
-    private void showRecordDetail(String emotion, String score, String diary, String stress) {
-        if (stress == null || stress.isEmpty() || stress.equals("미선택")) stress = "-";
-        if (score == null || score.isEmpty()) score = "-";
+    private void showRecordDetail(Map<String, Object> data, String dateKey) {
+        if (data == null) return;
+
+        String emotion = String.valueOf(data.get("emotion"));
+        Object scoreObj = data.get("score");
+        String scoreVal = (scoreObj != null) ? String.valueOf(scoreObj) : "-";
+        String diaryVal = String.valueOf(data.get("diary"));
+        String stressVal = String.valueOf(data.get("stress"));
+
+        if (stressVal.isEmpty() || stressVal.equals("미선택") || stressVal.equals("null")) stressVal = "-";
+        if (scoreVal.isEmpty() || scoreVal.equals("null")) scoreVal = "-";
+
+        final String finalScore = scoreVal;
+        final String finalStress = stressVal;
+        final String finalDiary = (diaryVal.isEmpty() || diaryVal.equals("null")) ? "작성된 일기 내용이 없습니다." : diaryVal;
 
         showRecordEmoji(emotion);
-        tvRecordStatus.setText(getEmotionLabel(emotion) + " | " + formatScore(score));
+        tvRecordStatus.setText(getEmotionLabel(emotion) + " | " + formatScore(finalScore));
         tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
         tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        tvScoreChip.setText("점수 | " + score + "점");
-        tvStressChip.setText("스트레스 | " + stress);
-        detailText.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
+        tvScoreChip.setText("점수 | " + finalScore + "점");
+        tvStressChip.setText("스트레스 | " + finalStress);
+        detailText.setText(finalDiary);
+
+        // 하단 상세 정보 영역 클릭 시 상세 화면으로 이동
+        View detailContainer = (View) detailText.getParent();
+        if (detailContainer != null) {
+            detailContainer.setOnClickListener(v -> {
+                String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                        data.get("timestamp") != null ? data.get("timestamp") : dateKey + " 00:00",
+                        emotion,
+                        finalScore,
+                        finalDiary,
+                        data.get("meals"),
+                        data.get("influence"),
+                        finalStress,
+                        data.get("fatigue"),
+                        data.get("sleep"),
+                        data.get("need"),
+                        data.get("feedback"),
+                        data.get("resultText")
+                );
+
+                RecordDetailFragment fragment = new RecordDetailFragment();
+                Bundle bundle = new Bundle();
+                bundle.putString("record", formattedRecord);
+                fragment.setArguments(bundle);
+
+                requireActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.frameLayout, fragment)
+                        .addToBackStack(null) // 뒤로가기 시 캘린더로 돌아오게 함
+                        .commit();
+            });
+        }
     }
 
     private void showRecordEmoji(String emotion) {
@@ -384,6 +417,12 @@ public class CalendarFragment extends Fragment {
         tvScoreChip.setText("점수 | -");
         tvStressChip.setText("스트레스 | -");
         detailText.setText(message);
+
+        // 기록이 없는 경우 클릭 리스너 제거
+        View detailContainer = (View) detailText.getParent();
+        if (detailContainer != null) {
+            detailContainer.setOnClickListener(null);
+        }
     }
 
     private int getEmotionFaceColor(String emotionCode) {
