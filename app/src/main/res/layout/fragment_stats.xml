@@ -157,14 +157,13 @@
                             android:id="@+id/tvStreakTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="최대 연속 기록"
+                            android:text="연속 기록"
                             android:textColor="@color/text_sub"
                             android:textSize="13sp" />
                         <TextView
-                            android:id="@+id/tvStreakCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0일"
+                            android:text="집중 모드"
                             android:textColor="@color/text_main"
                             android:textSize="15sp"
                             android:fontFamily="sans-serif-bold" />
