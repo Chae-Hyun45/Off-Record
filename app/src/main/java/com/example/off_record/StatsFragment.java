@@ -64,6 +64,7 @@ public class StatsFragment extends Fragment {
     private MaterialButtonToggleGroup toggleGroup;
     private TextView tvTotalCount;
     private TextView tvStreakTitle;
+    private TextView tvStreakCount;
     private TextView tvStreakMessage;
 
     private FirebaseFirestore db;
@@ -72,10 +73,8 @@ public class StatsFragment extends Fragment {
 
     private GenerativeModelFutures model;
 
-    // 🌟 [구조 변경] 메인 탭 이동(Fragment 재생성) 시에도 답변이 유지되도록 static(정적 메모리) 보관함으로 승격
+    // 🌟 [구조 변경] 메인 탭 이동 시에도 답변이 유지되도록 static 보관함 사용
     private static HashMap<String, String> aiCacheMap = new HashMap<>();
-
-    // 🌟 [구조 추가] 실제 데이터베이스의 값이 바뀌었는지 실시간 싱크 체크를 위한 데이터 정산 기록용 정적 장부
     private static HashSet<String> lastDiaryDatesSet = new HashSet<>();
     private static HashMap<String, Float> lastDiaryMoodMap = new HashMap<>();
 
@@ -95,6 +94,7 @@ public class StatsFragment extends Fragment {
         toggleGroup = view.findViewById(R.id.toggleGroup);
         tvTotalCount = view.findViewById(R.id.tvTotalCount);
         tvStreakTitle = view.findViewById(R.id.tvStreakTitle);
+        tvStreakCount = view.findViewById(R.id.tvStreakCount);
         tvStreakMessage = view.findViewById(R.id.tvStreakMessage);
 
         db = FirebaseFirestore.getInstance();
@@ -123,29 +123,10 @@ public class StatsFragment extends Fragment {
         return view;
     }
 
-    private void showEmptyGuestStats() {
-        diaryDatesSet.clear();
-        diaryMoodMap.clear();
-
-        if (toggleGroup != null) {
-            toggleGroup.setVisibility(View.VISIBLE);
-        }
-        if (lineChart != null) {
-            lineChart.setVisibility(View.VISIBLE);
-        }
-        if (tvStreakTitle != null) {
-            tvStreakTitle.setVisibility(View.VISIBLE);
-        }
-
-        calculateDiaryStreak();
-        updateChartByPeriod("1주");
-    }
-
     private void setupLineChart() {
         lineChart.getDescription().setEnabled(false);
         lineChart.setDrawGridBackground(false);
         lineChart.getAxisRight().setEnabled(false);
-
         lineChart.setViewPortOffsets(100f, 60f, 100f, 80f);
 
         YAxis leftAxis = lineChart.getAxisLeft();
@@ -169,7 +150,6 @@ public class StatsFragment extends Fragment {
                 lineChart.getTransformer(YAxis.AxisDependency.LEFT)
         );
         lineChart.setRendererLeftYAxis(emojiRenderer);
-
         lineChart.setTouchEnabled(true);
         lineChart.animateX(800);
     }
@@ -198,14 +178,11 @@ public class StatsFragment extends Fragment {
         @Override
         protected void drawYLabels(Canvas c, float fixedPosition, float[] positions, float offset) {
             super.drawYLabels(c, fixedPosition, positions, offset);
-
             float safeXPosition = mViewPortHandler.contentLeft() - emojiSize - 20f;
-
             int emojiIndex = 0;
             for (int i = 0; i < positions.length; i += 2) {
                 if (i + 1 >= positions.length) break;
                 float yPos = positions[i + 1];
-
                 if (emojiIndex < 5 && emojiBitmaps[emojiIndex] != null) {
                     float finalY = yPos - (emojiSize / 2f);
                     c.drawBitmap(emojiBitmaps[emojiIndex], safeXPosition, finalY, new Paint());
@@ -232,11 +209,12 @@ public class StatsFragment extends Fragment {
     private void updateChartByPeriod(String period) {
         List<Entry> entries = new ArrayList<>();
         XAxis xAxis = lineChart.getXAxis();
-        String label = isGuestMode ? "오늘 게스트 감정 기록" : "내 기분 추이 흐름";
+        String label = isGuestMode ? "게스트 감정 추이" : "내 감정 추이 흐름";
 
-        float totalScore = 0f;
-        int scoreCount = 0;
-        int actualLogCount = 0;
+        float totalScoreSum = 0f;
+        int scorePointCount = 0;
+        int totalLogCountInPeriod = 0;
+        List<String> periodDates = new ArrayList<>();
 
         switch (period) {
             case "1주":
@@ -248,21 +226,20 @@ public class StatsFragment extends Fragment {
 
                 for (int i = 0; i < 7; i++) {
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(weekCal.getTime());
+                    periodDates.add(fullDateKey);
                     if (diaryMoodMap.containsKey(fullDateKey)) {
                         float score = diaryMoodMap.get(fullDateKey);
                         entries.add(new Entry((float) i, score));
-                        totalScore += score;
-                        scoreCount++;
+                        totalScoreSum += score;
+                        scorePointCount++;
                     }
                     weekCal.add(Calendar.DATE, 1);
                 }
-                actualLogCount = scoreCount;
-
+                totalLogCountInPeriod = scorePointCount;
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(weekLabels));
                 xAxis.setAxisMinimum(0f);
                 xAxis.setAxisMaximum(6f);
                 xAxis.setLabelCount(7, true);
-                label = isGuestMode ? "오늘 게스트 감정 기록" : "이번 주 감정 추이";
                 break;
 
             case "1개월":
@@ -272,77 +249,66 @@ public class StatsFragment extends Fragment {
                 cal.add(Calendar.DATE, -29);
 
                 for (int i = 0; i < 30; i++) {
-                    monthLabels.add(labelSdf.format(cal.getTime()));
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(cal.getTime());
+                    periodDates.add(fullDateKey);
+                    monthLabels.add(labelSdf.format(cal.getTime()));
                     if (diaryMoodMap.containsKey(fullDateKey)) {
                         float score = diaryMoodMap.get(fullDateKey);
                         entries.add(new Entry((float) i, score));
-                        totalScore += score;
-                        scoreCount++;
+                        totalScoreSum += score;
+                        scorePointCount++;
                     }
                     cal.add(Calendar.DATE, 1);
                 }
-                actualLogCount = scoreCount;
-
+                totalLogCountInPeriod = scorePointCount;
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(monthLabels));
                 xAxis.setAxisMinimum(0f);
                 xAxis.setAxisMaximum(29f);
                 xAxis.setLabelCount(5, false);
-                label = isGuestMode ? "오늘 게스트 감정 기록" : "최근 1개월 감정 흐름";
                 break;
 
             case "1년":
                 String[] yearLabels = {"1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"};
                 HashMap<Integer, ArrayList<Float>> monthMoodMap = new HashMap<>();
+                int currentYear = Calendar.getInstance().get(Calendar.YEAR);
 
                 for (Map.Entry<String, Float> entry : diaryMoodMap.entrySet()) {
                     try {
                         Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).parse(entry.getKey());
                         Calendar dateCal = Calendar.getInstance();
                         dateCal.setTime(date);
-                        int year = dateCal.get(Calendar.YEAR);
-                        int currentYear = Calendar.getInstance().get(Calendar.YEAR);
-                        if (year == currentYear) {
-                            int monthIndex = dateCal.get(Calendar.MONTH);
-                            if (!monthMoodMap.containsKey(monthIndex)) {
-                                monthMoodMap.put(monthIndex, new ArrayList<>());
-                            }
-                            monthMoodMap.get(monthIndex).add(entry.getValue());
+                        if (dateCal.get(Calendar.YEAR) == currentYear) {
+                            int m = dateCal.get(Calendar.MONTH);
+                            if (!monthMoodMap.containsKey(m)) monthMoodMap.put(m, new ArrayList<>());
+                            monthMoodMap.get(m).add(entry.getValue());
+                            periodDates.add(entry.getKey()); // For max streak
                         }
-                    } catch (ParseException e) {
-                        e.printStackTrace();
-                    }
+                    } catch (Exception e) { e.printStackTrace(); }
                 }
 
-                float yearlyTotalScoreSum = 0f;
                 for (int i = 0; i < 12; i++) {
                     ArrayList<Float> moods = monthMoodMap.get(i);
                     if (moods != null && !moods.isEmpty()) {
                         float sum = 0f;
-                        for (Float mood : moods) {
-                            sum += mood;
-                            yearlyTotalScoreSum += mood;
+                        for (Float val : moods) {
+                            sum += val;
+                            totalScoreSum += val;
+                            totalLogCountInPeriod++;
                         }
                         float avg = sum / moods.size();
                         entries.add(new Entry((float) i, avg));
-                        actualLogCount += moods.size();
-                        scoreCount++;
+                        scorePointCount++;
                     }
                 }
-
-                if (actualLogCount > 0) {
-                    totalScore = yearlyTotalScoreSum;
-                }
-
                 xAxis.setValueFormatter(new IndexAxisValueFormatter(yearLabels));
                 xAxis.setAxisMinimum(0f);
                 xAxis.setAxisMaximum(11f);
                 xAxis.setLabelCount(12, true);
-                label = isGuestMode ? "오늘 게스트 감정 기록" : "올해 월별 감정 흐름";
                 break;
         }
 
-        updateAnalysisResult(period, totalScore, actualLogCount);
+        updateAnalysisResult(period, totalScoreSum, totalLogCountInPeriod);
+        calculateMaxStreakInPeriod(periodDates);
 
         if (entries.isEmpty()) {
             lineChart.clear();
@@ -360,78 +326,93 @@ public class StatsFragment extends Fragment {
         dataSet.setValueTextSize(11f);
         dataSet.setValueTextColor(Color.BLACK);
         dataSet.setMode(LineDataSet.Mode.LINEAR);
-
         dataSet.setDrawFilled(true);
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            android.graphics.drawable.Drawable drawable =
-                    new android.graphics.drawable.GradientDrawable(
-                            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
-                            new int[]{Color.parseColor("#4CAF50"), Color.parseColor("#00FFFFFF")}
-                    );
-            dataSet.setFillDrawable(drawable);
-        } else {
-            dataSet.setFillColor(Color.parseColor("#4CAF50"));
+        android.graphics.drawable.Drawable drawable = new android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{Color.parseColor("#4CAF50"), Color.parseColor("#00FFFFFF")}
+        );
+        dataSet.setFillDrawable(drawable);
+
+        lineChart.setData(new LineData(dataSet));
+        lineChart.invalidate();
+    }
+
+    private void calculateMaxStreakInPeriod(List<String> periodDates) {
+        if (periodDates.isEmpty()) {
+            if (tvStreakCount != null) tvStreakCount.setText("0일");
+            return;
         }
 
-        LineData lineData = new LineData(dataSet);
-        lineChart.setData(lineData);
-        lineChart.invalidate();
+        Collections.sort(periodDates);
+        int maxStreak = 0;
+        int currentStreak = 0;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
+        Calendar prevCal = null;
+
+        for (String dateStr : periodDates) {
+            if (!diaryDatesSet.contains(dateStr)) {
+                maxStreak = Math.max(maxStreak, currentStreak);
+                currentStreak = 0;
+                prevCal = null;
+                continue;
+            }
+
+            try {
+                Date date = sdf.parse(dateStr);
+                Calendar currentCal = Calendar.getInstance();
+                currentCal.setTime(date);
+                clearTime(currentCal);
+
+                if (prevCal == null) {
+                    currentStreak = 1;
+                } else {
+                    Calendar expected = (Calendar) prevCal.clone();
+                    expected.add(Calendar.DATE, 1);
+                    if (currentCal.equals(expected)) {
+                        currentStreak++;
+                    } else {
+                        maxStreak = Math.max(maxStreak, currentStreak);
+                        currentStreak = 1;
+                    }
+                }
+                prevCal = currentCal;
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+        maxStreak = Math.max(maxStreak, currentStreak);
+
+        if (tvStreakCount != null) tvStreakCount.setText(maxStreak + "일");
     }
 
     private void updateAnalysisResult(String period, float totalScore, int count) {
         if (count == 0) {
-            tvStreakMessage.setText(period + " 동안 등록된 마음 데이터가 없습니다.\n오늘의 감정을 일기에 기록해 보세요! 🌱");
+            tvStreakMessage.setText(period + " 동안 등록된 데이터가 없습니다. 🌱");
             return;
         }
 
         float avgScore = totalScore / count;
         String emoji = getEmojiForScore(avgScore);
         String moodText = getMoodTextForScore(avgScore);
+        String periodLabel = period.equals("1주") ? "주간" : period.equals("1개월") ? "월간" : "연간";
 
-        String periodLabel = "선택 기간";
-        if ("1주".equals(period)) periodLabel = "주간";
-        else if ("1개월".equals(period)) periodLabel = "월간";
-        else if ("1년".equals(period)) periodLabel = "연간";
-
-        // 🌟 캐시 보관함 조회 (정적 변수로 승격되어 다른 큰 탭 이동 후 컴백해도 데이터가 완벽히 보존됨)
         if (aiCacheMap.containsKey(periodLabel)) {
             StringBuilder sb = new StringBuilder();
             sb.append(periodLabel).append(" 평균 감정: ").append(emoji).append(" (").append(moodText).append(")\n");
             sb.append("기록 횟수: ").append(count).append("회\n\n");
             sb.append(aiCacheMap.get(periodLabel));
-
             tvStreakMessage.setText(sb.toString());
             return;
         }
 
-        String basicSummary = periodLabel + " 평균 감정: " + emoji + " (" + moodText + ")\n" +
-                "기록 횟수: " + count + "회\n\n" +
-                "🔮 AI가 사용자님의 " + periodLabel + " 흐름을 심층 정산하는 중입니다...";
-        tvStreakMessage.setText(basicSummary);
-
+        tvStreakMessage.setText(periodLabel + " 평균 감정: " + emoji + " (" + moodText + ")\n기록 횟수: " + count + "회\n\n🔮 AI 분석 중...");
         askGeminiForStatsReport(periodLabel, avgScore, count, emoji, moodText);
     }
 
     private void askGeminiForStatsReport(String periodLabel, float avgScore, int count, String emoji, String moodText) {
-        if (model == null) {
-            tvStreakMessage.setText(periodLabel + " 평균 감정: " + emoji + " (" + moodText + ")\n기록 횟수: " + count + "회\n\n[AI 연결 실패] 네트워크 상태를 확인해 주세요.");
-            return;
-        }
+        if (model == null) return;
 
-        String aiRole = "너는 사용자의 장기 기분 트렌드를 예리하게 포착해 내는 '데이터 기반 전문 심리 분석가'이자 다정한 멘토야.";
-
-        // 🌟 [수정 완료] 기존의 '정원님' 호칭 구역을 '사용자님'으로 완벽하게 한글화 교체!
-        String customPrompt = String.format(
-                "%s\n\n" +
-                        "사용자가 기록한 %s 마음 통계 데이터 결과야. 이 수치들을 유심히 분석해서 유저의 마음 흐름을 보듬어주는 종합 심리 리포트를 200자 내외로 자연스럽게 작성해줘.\n\n" +
-                        "[전달할 통계 리포트 정보]\n" +
-                        "- 분석 단위: %s 리포트\n" +
-                        "- 기간 총 기록 횟수: %d회\n" +
-                        "- 마음 평균 점수: %.2f점 (5점 만점 기준)\n" +
-                        "- 기간 종합 대표 기분: %s (%s)\n\n" +
-                        "위 요약 수치에 기반하여 최근 어떤 심리적 패턴을 보이고 있는지 공감해 주고, 사용자님이 앞으로 더 활기차고 평온하게 지낼 수 있도록 맞춤형 피드백을 다정하게 해줘.",
-                aiRole, periodLabel, periodLabel, count, avgScore, emoji, moodText
-        );
+        String aiRole = "너는 사용자의 기분 트렌드를 포착하는 다정한 심리 분석가야.";
+        String customPrompt = String.format("%s\n\n[통계 데이터]\n- 단위: %s\n- 횟수: %d회\n- 평균: %.2f점\n- 대표기분: %s (%s)\n\n위 수치에 기반해 최근 패턴을 공감하고 다정한 피드백을 200자 내외로 해줘.",
+                aiRole, periodLabel, count, avgScore, emoji, moodText);
 
         Content prompt = new Content.Builder().addText(customPrompt).build();
         Executor executor = ContextCompat.getMainExecutor(requireContext());
@@ -440,34 +421,33 @@ public class StatsFragment extends Fragment {
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
-                if (!isAdded() || getContext() == null) return;
-
-                String aiAnalysisText = result.getText();
-                aiCacheMap.put(periodLabel, aiAnalysisText);
-
-                StringBuilder sb = new StringBuilder();
-                sb.append(periodLabel).append(" 평균 감정: ").append(emoji).append(" (").append(moodText).append(")\n");
-                sb.append("기록 횟수: ").append(count).append("회\n\n");
-                sb.append(aiAnalysisText);
-
-                tvStreakMessage.setText(sb.toString());
+                if (!isAdded()) return;
+                String text = result.getText();
+                aiCacheMap.put(periodLabel, text);
+                updateAnalysisResultDisplay(periodLabel, emoji, moodText, count, text);
             }
-
             @Override
             public void onFailure(Throwable t) {
-                if (!isAdded() || getContext() == null) return;
-                Log.e("GeminiStats", "통계 제미나이 호출 중 에러 발생", t);
-                tvStreakMessage.setText(periodLabel + " 평균 감정: " + emoji + " (" + moodText + ")\n기록 횟수: " + count + "회\n\n[제미나이 엔진 응답 지연으로 통계 분석을 불러오지 못했습니다.]");
+                if (!isAdded()) return;
+                tvStreakMessage.append("\n[AI 연결 실패]");
             }
         }, executor);
     }
 
+    private void updateAnalysisResultDisplay(String periodLabel, String emoji, String moodText, int count, String aiText) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(periodLabel).append(" 평균 감정: ").append(emoji).append(" (").append(moodText).append(")\n");
+        sb.append("기록 횟수: ").append(count).append("회\n\n");
+        sb.append(aiText);
+        tvStreakMessage.setText(sb.toString());
+    }
+
     private String getEmojiForScore(float score) {
-        if (score >= 4.5f) return "🥰";
+        if (score >= 4.5f) return "😆";
         if (score >= 3.5f) return "😊";
         if (score >= 2.5f) return "😐";
         if (score >= 1.5f) return "😔";
-        return "😭";
+        return "😠";
     }
 
     private String getMoodTextForScore(float score) {
@@ -479,84 +459,72 @@ public class StatsFragment extends Fragment {
     }
 
     private void loadDiaryDataFromServer() {
-        if (currentUid == null) {
-            loadGuestDiaryData();
-            return;
-        }
-
-        db.collection("users")
-                .document(currentUid)
-                .collection("daily_records")
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult() != null) {
-                        HashSet<String> newDatesSet = new HashSet<>();
-                        HashMap<String, Float> newMoodMap = new HashMap<>();
-
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            String dateStr = document.getId();
-                            String emotion = document.getString("emotion");
-                            float moodScore = emotionToMoodScore(emotion);
-
-                            if (dateStr != null) {
-                                newDatesSet.add(dateStr);
-                                newMoodMap.put(dateStr, moodScore);
-                            }
-                        }
-
-                        // 🌟 [변동 감지 알고리즘 적용]
-                        // 서버에서 불러온 진짜 일기 원본 데이터가 '과거 정산 내역'과 단 하나라도 다를 때만 캐시를 폐기합니다!
-                        if (!newDatesSet.equals(lastDiaryDatesSet) || !newMoodMap.equals(lastDiaryMoodMap)) {
-                            aiCacheMap.clear(); // 데이터가 진짜 바뀌었으니 캐시 청소
-                            lastDiaryDatesSet = newDatesSet;
-                            lastDiaryMoodMap = newMoodMap;
-                        }
-
-                        // 복원 완료된 전역 버퍼 데이터를 인스턴스로 복사
-                        diaryDatesSet = new HashSet<>(lastDiaryDatesSet);
-                        diaryMoodMap = new HashMap<>(lastDiaryMoodMap);
-
-                        if (tvTotalCount != null) {
-                            tvTotalCount.setText(diaryDatesSet.size() + "회");
-                        }
-                        calculateDiaryStreak();
-                        updateChartByPeriod("1주");
+        if (currentUid == null) { loadGuestDiaryData(); return; }
+        db.collection("users").document(currentUid).collection("daily_records").get().addOnCompleteListener(task -> {
+            if (task.isSuccessful() && task.getResult() != null) {
+                HashSet<String> newDates = new HashSet<>();
+                HashMap<String, Float> newMoods = new HashMap<>();
+                for (QueryDocumentSnapshot doc : task.getResult()) {
+                    String dateStr = doc.getId();
+                    Long scoreObj = doc.getLong("emotionScore");
+                    String emoStr = doc.getString("emotion");
+                    float score;
+                    if (scoreObj != null && scoreObj > 0) {
+                        score = scoreObj.floatValue();
                     } else {
-                        Toast.makeText(getContext(), "데이터 로드 실패", Toast.LENGTH_SHORT).show();
+                        score = emotionToMoodScore(emoStr);
                     }
-                });
+                    if (dateStr != null) {
+                        newDates.add(dateStr);
+                        newMoods.put(dateStr, score);
+                    }
+                }
+                if (!newDates.equals(lastDiaryDatesSet) || !newMoods.equals(lastDiaryMoodMap)) {
+                    aiCacheMap.clear();
+                    lastDiaryDatesSet = newDates;
+                    lastDiaryMoodMap = newMoods;
+                }
+                diaryDatesSet = new HashSet<>(lastDiaryDatesSet);
+                diaryMoodMap = new HashMap<>(lastDiaryMoodMap);
+                if (tvTotalCount != null) tvTotalCount.setText(diaryDatesSet.size() + "회");
+                updateChartByPeriod("1주");
+            }
+        });
     }
 
     private void loadGuestDiaryData() {
-        HashSet<String> newDatesSet = new HashSet<>();
-        HashMap<String, Float> newMoodMap = new HashMap<>();
-
-        GuestRecordStore.clearIfNotToday(requireContext());
-        Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
-        if (guestRecord != null) {
-            String dateStr = String.valueOf(guestRecord.get("date"));
-            String emotion = String.valueOf(guestRecord.get("emotion"));
-            newDatesSet.add(dateStr);
-            newMoodMap.put(dateStr, emotionToMoodScore(emotion));
+        HashSet<String> newDates = new HashSet<>();
+        HashMap<String, Float> newMoods = new HashMap<>();
+        SharedPreferences pref = requireContext().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+        String allRecords = pref.getString("all_records", "");
+        if (!allRecords.isEmpty()) {
+            for (String record : allRecords.split("##")) {
+                if (record.isEmpty()) continue;
+                String[] detail = record.split("\\|");
+                if (detail.length >= 2) {
+                    String dateKey = detail[0].split(" ")[0];
+                    float score = (detail.length >= 13) ? Float.parseFloat(detail[12]) : emotionToMoodScore(detail[1]);
+                    if (score < 1f || score > 5f) score = emotionToMoodScore(detail[1]);
+                    newDates.add(dateKey);
+                    newMoods.put(dateKey, score);
+                }
+            }
         }
-
-        // 🌟 게스트 모드도 정밀 변동 체크 결합
-        if (!newDatesSet.equals(lastDiaryDatesSet) || !newMoodMap.equals(lastDiaryMoodMap)) {
+        if (!newDates.equals(lastDiaryDatesSet) || !newMoods.equals(lastDiaryMoodMap)) {
             aiCacheMap.clear();
-            lastDiaryDatesSet = newDatesSet;
-            lastDiaryMoodMap = newMoodMap;
+            lastDiaryDatesSet = newDates;
+            lastDiaryMoodMap = newMoods;
         }
-
         diaryDatesSet = new HashSet<>(lastDiaryDatesSet);
         diaryMoodMap = new HashMap<>(lastDiaryMoodMap);
-
-        calculateDiaryStreak();
+        if (tvTotalCount != null) tvTotalCount.setText(diaryDatesSet.size() + "회");
         updateChartByPeriod("1주");
     }
 
     private float emotionToMoodScore(String emotion) {
         if (emotion == null) return 3.0f;
-        switch (emotion) {
+        String val = normalizeEmotionValue(emotion);
+        switch (val) {
             case "매우_안좋아요": return 1.0f;
             case "안좋아요": return 2.0f;
             case "보통이에요": return 3.0f;
@@ -566,92 +534,19 @@ public class StatsFragment extends Fragment {
         }
     }
 
-    private void calculateDiaryStreak() {
-        if (diaryDatesSet.isEmpty()) {
-            tvStreakMessage.setText("아직 작성된 일기가 없습니다. 첫 일기를 쓰고 기분을 기록해 보세요! ✍️");
-            return;
-        }
-
-        List<Date> dateList = new ArrayList<>();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA);
-
-        for (String dateStr : diaryDatesSet) {
-            try { dateList.add(sdf.parse(dateStr)); } catch (ParseException e) { e.printStackTrace(); }
-        }
-        Collections.sort(dateList);
-
-        Calendar cal = Calendar.getInstance();
-        clearTime(cal);
-        Date today = cal.getTime();
-        cal.add(Calendar.DATE, -1);
-        Date yesterday = cal.getTime();
-
-        Date latestDiaryDate = dateList.get(dateList.size() - 1);
-        if (latestDiaryDate.before(yesterday)) {
-            tvStreakMessage.setText("불타는 일기 열정! 🔥 현재 0일 연속으로 일기를 기록 중입니다.");
-            return;
-        }
-
-        int streakCount = 1;
-        for (int i = dateList.size() - 1; i > 0; i--) {
-            Calendar currentCal = Calendar.getInstance();
-            currentCal.setTime(dateList.get(i));
-            Calendar prevCal = Calendar.getInstance();
-            prevCal.setTime(dateList.get(i - 1));
-
-            currentCal.add(Calendar.DATE, -1);
-            if (currentCal.getTime().equals(prevCal.getTime())) {
-                streakCount++;
-            } else if (currentCal.getTime().after(prevCal.getTime())) {
-                continue;
-            } else {
-                break;
-            }
-        }
-        tvStreakMessage.setText("불타는 일기 열정! 🔥 현재 " + streakCount + "일 연속으로 일기를 기록 중입니다.");
-    }
-
     private void clearTime(Calendar cal) {
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        cal.set(Calendar.MILLISECOND, 0);
+        cal.set(Calendar.HOUR_OF_DAY, 0); cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0); cal.set(Calendar.MILLISECOND, 0);
     }
 
     private String normalizeEmotionValue(String emotionValue) {
         if (emotionValue == null) return "";
         String value = emotionValue.trim();
-
         if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
         if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
         if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
         if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
         if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
-
         return value;
-    }
-
-    private String getEmotionLabel(String emotionValue) {
-        String value = normalizeEmotionValue(emotionValue);
-
-        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
-        if ("안좋아요".equals(value)) return "안 좋아요";
-        if ("보통이에요".equals(value)) return "보통이에요";
-        if ("좋아요".equals(value)) return "좋아요";
-        if ("매우_좋아요".equals(value)) return "매우 좋아요";
-
-        return "감정 미선택";
-    }
-
-    private int getEmotionScore(String emotionValue) {
-        String value = normalizeEmotionValue(emotionValue);
-
-        if ("매우_안좋아요".equals(value)) return 1;
-        if ("안좋아요".equals(value)) return 2;
-        if ("보통이에요".equals(value)) return 3;
-        if ("좋아요".equals(value)) return 4;
-        if ("매우_좋아요".equals(value)) return 5;
-
-        return 0;
     }
 }
