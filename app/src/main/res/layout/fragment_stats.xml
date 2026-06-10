@@ -161,12 +161,13 @@
                             android:textColor="@color/text_sub"
                             android:textSize="13sp" />
                         <TextView
+                            android:id="@+id/tvStreakCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="집중 모드"
+                            android:text="0일"
                             android:textColor="@color/text_main"
-                            android:textSize="15sp"
-                            android:fontFamily="sans-serif-bold" />
+                            android:textSize="18sp"
+                            android:fontFamily="sans-serif-black" />
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

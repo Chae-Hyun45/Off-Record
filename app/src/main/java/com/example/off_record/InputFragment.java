@@ -478,7 +478,7 @@ public class InputFragment extends Fragment {
         if ("좋아요".equals(value)) return 4;
         if ("매우_좋아요".equals(value)) return 5;
 
-        return 0;
+        return 3;
     }
 
     private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
