@@ -218,11 +218,13 @@ public class StatsFragment extends Fragment {
 
         switch (period) {
             case "1주":
-                String[] weekLabels = {"월", "화", "수", "목", "금", "토", "일"};
+                String[] weekLabels = {"일", "월", "화", "수", "목", "금", "토"};
                 Calendar weekCal = Calendar.getInstance();
                 int todayDow = weekCal.get(Calendar.DAY_OF_WEEK);
-                int diffToMonday = (todayDow == Calendar.SUNDAY) ? 6 : todayDow - 2;
-                weekCal.add(Calendar.DATE, -diffToMonday);
+                // Sunday is 1, Monday is 2, ..., Saturday is 7
+                // If today is Wednesday (4), diff to Sunday (1) is 3
+                int diffToSunday = todayDow - Calendar.SUNDAY;
+                weekCal.add(Calendar.DATE, -diffToSunday);
 
                 for (int i = 0; i < 7; i++) {
                     String fullDateKey = new SimpleDateFormat("yyyy-MM-dd", Locale.KOREA).format(weekCal.getTime());
@@ -325,6 +327,7 @@ public class StatsFragment extends Fragment {
         dataSet.setDrawCircleHole(true);
         dataSet.setValueTextSize(11f);
         dataSet.setValueTextColor(Color.BLACK);
+        dataSet.setDrawValues(false);
         dataSet.setMode(LineDataSet.Mode.LINEAR);
         dataSet.setDrawFilled(true);
         android.graphics.drawable.Drawable drawable = new android.graphics.drawable.GradientDrawable(
