@@ -167,7 +167,7 @@ public class RecordDetailFragment extends Fragment {
         if ("안좋아요".equals(value)) return 2;
         if ("보통이에요".equals(value)) return 3;
         if ("좋아요".equals(value)) return 4;
-        if ("매우_좋아요".equals(value)) return 5;
+        if ("매우좋아요".equals(value)) return 5;
 
         return 0;
     }
