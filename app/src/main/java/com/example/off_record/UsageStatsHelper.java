@@ -170,12 +170,14 @@ public class UsageStatsHelper {
         long nightMillis = 0;
         int shortSessions = 0;
         
-        Calendar nightStart = Calendar.getInstance();
-        nightStart.setTimeInMillis(startTime);
-        nightStart.set(Calendar.HOUR_OF_DAY, 0);
-        nightStart.set(Calendar.MINUTE, 0);
-        nightStart.set(Calendar.SECOND, 0);
-        long nStart = nightStart.getTimeInMillis();
+        // [정밀 수정] 실행 날짜 기준이 아닌, 요청된 startTime(해당 일 자정)을 기준으로 정확히 00-03시 구간 설정
+        Calendar cal = Calendar.getInstance();
+        cal.setTimeInMillis(startTime);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        long nStart = cal.getTimeInMillis();
         long nEnd = nStart + (3 * 60 * 60 * 1000L); // 00:00 ~ 03:00
 
         for (AppInterval interval : rawIntervals) {
@@ -184,10 +186,20 @@ public class UsageStatsHelper {
                 shortSessions++;
             }
             
+            // 야간 시간대와 겹치는 구간 정밀 계산
             long overlapStart = Math.max(interval.start, nStart);
             long overlapEnd = Math.min(interval.end, nEnd);
             if (overlapEnd > overlapStart) {
                 nightMillis += (overlapEnd - overlapStart);
+            }
+        }
+
+        // 만약 로그 분석 결과가 0인데 총 사용시간은 있다면, 시스템 통계로 2차 검증
+        if (nightMillis == 0 && summary.totalUsageMinutes > 0) {
+            Map<String, android.app.usage.UsageStats> nightStats = usageStatsManager.queryAndAggregateUsageStats(nStart, nEnd);
+            for (android.app.usage.UsageStats s : nightStats.values()) {
+                if (shouldIgnorePackage(context, s.getPackageName())) continue;
+                nightMillis += s.getTotalTimeInForeground();
             }
         }
 
