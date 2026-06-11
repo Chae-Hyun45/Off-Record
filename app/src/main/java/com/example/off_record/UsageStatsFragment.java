@@ -53,6 +53,8 @@ public class UsageStatsFragment extends Fragment {
     private TextView tvDailyAverage;
     private TextView tvUpdatedAt;
     private TextView tvSelectedDayTitle;
+    private TextView tvSelectedDayDate;
+    private TextView tvSelectedDayTotal;
     private TextView tvSocialTime;
     private TextView tvEntertainmentTime;
     private TextView tvShoppingTime;
@@ -109,6 +111,8 @@ public class UsageStatsFragment extends Fragment {
         tvDailyAverage = view.findViewById(R.id.tvDailyAverage);
         tvUpdatedAt = view.findViewById(R.id.tvUpdatedAt);
         tvSelectedDayTitle = view.findViewById(R.id.tvSelectedDayTitle);
+        tvSelectedDayDate = view.findViewById(R.id.tvSelectedDayDate);
+        tvSelectedDayTotal = view.findViewById(R.id.tvSelectedDayTotal);
         tvSocialTime = view.findViewById(R.id.tvSocialTime);
         tvEntertainmentTime = view.findViewById(R.id.tvEntertainmentTime);
         tvShoppingTime = view.findViewById(R.id.tvShoppingTime);
@@ -389,6 +393,8 @@ public class UsageStatsFragment extends Fragment {
         }
 
         String[] labels = {"일", "월", "화", "수", "목", "금", "토"};
+        int barAreaHeight = dp(100);
+        int labelAreaHeight = dp(34);
 
         for (int i = 0; i < 7; i++) {
             UsageReport dayReport = weekReport.dailyReports[i];
@@ -408,31 +414,28 @@ public class UsageStatsFragment extends Fragment {
                 bindSelectedDay(currentWeekReport.dailyReports[finalI], finalI);
             });
 
-            LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.MATCH_PARENT, 1f);
             llWeeklyChart.addView(column, columnParams);
 
-            /*
-            TextView timeLabel = new TextView(getContext());
-            timeLabel.setText(formatDurationTwoLine(millis));
-            timeLabel.setTextColor(isSelected ? COLOR_TEXT_MAIN : COLOR_TEXT_SUB);
-            timeLabel.setTextSize(11f);
-            timeLabel.setGravity(Gravity.CENTER);
-            timeLabel.setTypeface(Typeface.DEFAULT, isSelected ? Typeface.BOLD : Typeface.NORMAL);
-            column.addView(timeLabel);
-
-            View spacer = new View(getContext());
-            column.addView(spacer, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)));
-            */
+            LinearLayout barArea = new LinearLayout(getContext());
+            barArea.setGravity(Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);
+            barArea.setOrientation(LinearLayout.VERTICAL);
+            column.addView(barArea, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, barAreaHeight));
 
             View bar = new View(getContext());
             int barHeight = millis <= 0 ? dp(10) : (int) Math.max(dp(10), (millis * dp(96)) / (float) max);
             int barWidth = dp(34);
             bar.setBackground(createRoundedDrawable(isSelected ? COLOR_YELLOW_ACTIVE : COLOR_BAR_DEFAULT, 12));
             LinearLayout.LayoutParams barParams = new LinearLayout.LayoutParams(barWidth, barHeight);
-            column.addView(bar, barParams);
+            barArea.addView(bar, barParams);
 
-            View spacer2 = new View(getContext());
-            column.addView(spacer2, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(10)));
+            View spacer = new View(getContext());
+            column.addView(spacer, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(6)));
+
+            LinearLayout labelArea = new LinearLayout(getContext());
+            labelArea.setGravity(Gravity.TOP | Gravity.CENTER_HORIZONTAL);
+            labelArea.setOrientation(LinearLayout.VERTICAL);
+            column.addView(labelArea, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, labelAreaHeight));
 
             TextView dayLabel = new TextView(getContext());
             dayLabel.setText(labels[i]);
@@ -440,11 +443,15 @@ public class UsageStatsFragment extends Fragment {
             dayLabel.setTextSize(13f);
             dayLabel.setTextColor(isSelected ? COLOR_TEXT_MAIN : COLOR_TEXT_SUB);
             dayLabel.setTypeface(Typeface.DEFAULT, isSelected ? Typeface.BOLD : Typeface.NORMAL);
+            dayLabel.setMinWidth(dp(40));
+            dayLabel.setMinHeight(dp(26));
             if (isSelected) {
                 dayLabel.setBackground(createRoundedDrawable(COLOR_YELLOW_SOFT, 999));
                 dayLabel.setPadding(dp(12), dp(4), dp(12), dp(4));
+            } else {
+                dayLabel.setPadding(0, dp(4), 0, dp(4));
             }
-            column.addView(dayLabel);
+            labelArea.addView(dayLabel);
         }
     }
 
@@ -456,10 +463,29 @@ public class UsageStatsFragment extends Fragment {
             tvSelectedDayTitle.setText(dayNames[dayIndex] + " 사용 앱");
         }
 
+        if (tvSelectedDayDate != null) {
+            tvSelectedDayDate.setText(formatSelectedDate(dayIndex));
+        }
+        if (tvSelectedDayTotal != null) {
+            tvSelectedDayTotal.setText("총 사용시간 " + formatDuration(selectedReport.totalMillis));
+        }
+
         setCategoryText(tvSocialTime, selectedReport.categoryUsageMap.getOrDefault(UsageCategory.SOCIAL, 0L));
         setCategoryText(tvEntertainmentTime, selectedReport.categoryUsageMap.getOrDefault(UsageCategory.ENTERTAINMENT, 0L));
         setCategoryText(tvShoppingTime, selectedReport.categoryUsageMap.getOrDefault(UsageCategory.SHOPPING, 0L));
         drawAppList(selectedReport.appUsageMap);
+    }
+
+    private String formatSelectedDate(int dayIndex) {
+        String[] dayNames = {"일요일", "월요일", "화요일", "수요일", "목요일", "금요일", "토요일"};
+        Calendar selectedDate = currentWeekReport != null && currentWeekReport.weekStart != null
+                ? (Calendar) currentWeekReport.weekStart.clone()
+                : Calendar.getInstance();
+        selectedDate.add(Calendar.DAY_OF_MONTH, dayIndex);
+        return String.format(Locale.KOREAN, "%d월 %d일 %s",
+                selectedDate.get(Calendar.MONTH) + 1,
+                selectedDate.get(Calendar.DAY_OF_MONTH),
+                dayNames[dayIndex]);
     }
 
     private void drawAppList(Map<String, Long> appUsageMap) {
