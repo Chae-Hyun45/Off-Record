@@ -43,6 +43,9 @@ public class MainActivity extends AppCompatActivity {
         // 앱이 켜질 때, 사용자가 알림을 켜둔 상태라면 매일 알림을 다시 예약
         setupDailyAlarm();
 
+        // 매일 자정 사용 데이터 자동 동기화 예약
+        DailyUsageSyncWorker.enqueueDailyWork(this);
+
         // 1. 앱 실행 시 첫 화면은 캘린더로 설정
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()

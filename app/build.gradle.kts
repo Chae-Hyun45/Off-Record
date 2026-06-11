@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.activity)
     implementation(libs.constraintlayout)
+    implementation(libs.androidx.work.runtime)
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.13.0"))
