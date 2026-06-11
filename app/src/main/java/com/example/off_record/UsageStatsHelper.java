@@ -53,6 +53,12 @@ public class UsageStatsHelper {
             return summary;
         }
 
+        // 권한 체크 추가
+        if (!hasUsageStatsPermission(context)) {
+            summary.digitalPattern = "권한 미허용";
+            return summary;
+        }
+
         Calendar startCal = Calendar.getInstance();
         startCal.set(Calendar.HOUR_OF_DAY, 0);
         startCal.set(Calendar.MINUTE, 0);
@@ -65,118 +71,214 @@ public class UsageStatsHelper {
         return collectUsageSummary(context, startTime, endTime);
     }
 
-    private static PhoneUsageSummary collectUsageSummary(Context context, long startTime, long endTime) {
+    public static PhoneUsageSummary getYesterdayUsageSummary(Context context) {
         PhoneUsageSummary summary = new PhoneUsageSummary();
 
-        UsageStatsManager usageStatsManager =
-                (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
+        if (context == null || !hasUsageStatsPermission(context)) {
+            summary.digitalPattern = "데이터 없음";
+            return summary;
+        }
+
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -1);
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+
+        long startTime = cal.getTimeInMillis();
+
+        cal.set(Calendar.HOUR_OF_DAY, 23);
+        cal.set(Calendar.MINUTE, 59);
+        cal.set(Calendar.SECOND, 59);
+        cal.set(Calendar.MILLISECOND, 999);
+
+        long endTime = cal.getTimeInMillis();
+
+        return collectUsageSummary(context, startTime, endTime);
+    }
+
+    public static boolean hasUsageStatsPermission(Context context) {
+        try {
+            android.app.AppOpsManager appOps = (android.app.AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+            int mode = appOps.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), context.getPackageName());
+            return mode == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static PhoneUsageSummary collectUsageSummary(Context context, long startTime, long endTime) {
+        PhoneUsageSummary summary = new PhoneUsageSummary();
+        UsageStatsManager usageStatsManager = (UsageStatsManager) context.getSystemService(Context.USAGE_STATS_SERVICE);
 
         if (usageStatsManager == null || startTime >= endTime) {
             summary.digitalPattern = "데이터 없음";
             return summary;
         }
 
+        // '생활 데이터' 메뉴와 100% 동일한 Raw Events 분석 로직
         UsageEvents usageEvents = usageStatsManager.queryEvents(startTime, endTime);
-
-        List<AppInterval> intervals = new ArrayList<>();
-        Map<String, Long> openTimeMap = new HashMap<>();
-
+        List<AppInterval> rawIntervals = new ArrayList<>();
+        
+        String currentActiveApp = null;
+        long currentAppStartTime = 0L;
         UsageEvents.Event event = new UsageEvents.Event();
+
+        int totalOpenCount = 0;
+        String lastPkg = "";
 
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event);
-
             String pkg = event.getPackageName();
             if (shouldIgnorePackage(context, pkg)) continue;
 
-            int eventType = event.getEventType();
-            long eventTime = event.getTimeStamp();
+            int type = event.getEventType();
+            long time = event.getTimeStamp();
 
-            if (eventType == UsageEvents.Event.ACTIVITY_RESUMED) {
-                summary.totalOpenCount++;
-                openTimeMap.put(pkg, eventTime);
-            } else if (eventType == UsageEvents.Event.ACTIVITY_PAUSED) {
-                if (openTimeMap.containsKey(pkg)) {
-                    long openTime = openTimeMap.remove(pkg);
-                    long duration = eventTime - openTime;
+            if (type == UsageEvents.Event.ACTIVITY_RESUMED) {
+                if (currentActiveApp != null && !currentActiveApp.equals(pkg)) {
+                    addInterval(rawIntervals, currentActiveApp, currentAppStartTime, time, startTime, endTime);
+                }
+                currentActiveApp = pkg;
+                currentAppStartTime = time;
 
-                    if (duration > 0) {
-                        intervals.add(new AppInterval(pkg, openTime, eventTime));
-
-                        if (duration <= SHORT_SESSION_LIMIT) {
-                            summary.shortSessionCount++;
-                        }
-
-                        summary.nightUsageMinutes += calculateNightUsageMinutes(openTime, eventTime);
-                    }
+                if (!pkg.equals(lastPkg)) {
+                    totalOpenCount++;
+                    lastPkg = pkg;
+                }
+            } else if (type == UsageEvents.Event.ACTIVITY_PAUSED) {
+                if (currentActiveApp != null && currentActiveApp.equals(pkg)) {
+                    addInterval(rawIntervals, currentActiveApp, currentAppStartTime, time, startTime, endTime);
+                    currentActiveApp = null;
                 }
             }
         }
 
-        for (Map.Entry<String, Long> entry : openTimeMap.entrySet()) {
-            long openTime = entry.getValue();
-            long duration = endTime - openTime;
+        if (currentActiveApp != null) {
+            addInterval(rawIntervals, currentActiveApp, currentAppStartTime, endTime, startTime, endTime);
+        }
 
-            if (duration > 0) {
-                intervals.add(new AppInterval(entry.getKey(), openTime, endTime));
+        // 중복 제거된 순수 사용 시간 계산
+        rawIntervals.sort((a, b) -> Long.compare(a.start, b.start));
+        long totalMillis = calculateMergedUsageMillis(rawIntervals);
+        summary.totalUsageMinutes = totalMillis / (1000 * 60);
+        summary.totalOpenCount = totalOpenCount;
 
-                if (duration <= SHORT_SESSION_LIMIT) {
-                    summary.shortSessionCount++;
-                }
+        // 세부 지표 계산 (야간 사용 및 짧은 세션)
+        long nightMillis = 0;
+        int shortSessions = 0;
+        
+        Calendar nightStart = Calendar.getInstance();
+        nightStart.setTimeInMillis(startTime);
+        nightStart.set(Calendar.HOUR_OF_DAY, 0);
+        nightStart.set(Calendar.MINUTE, 0);
+        nightStart.set(Calendar.SECOND, 0);
+        long nStart = nightStart.getTimeInMillis();
+        long nEnd = nStart + (3 * 60 * 60 * 1000L); // 00:00 ~ 03:00
 
-                summary.nightUsageMinutes += calculateNightUsageMinutes(openTime, endTime);
+        for (AppInterval interval : rawIntervals) {
+            long duration = interval.end - interval.start;
+            if (duration > 5000L && duration <= SHORT_SESSION_LIMIT) {
+                shortSessions++;
+            }
+            
+            long overlapStart = Math.max(interval.start, nStart);
+            long overlapEnd = Math.min(interval.end, nEnd);
+            if (overlapEnd > overlapStart) {
+                nightMillis += (overlapEnd - overlapStart);
             }
         }
 
-        summary.totalUsageMinutes = calculateMergedUsageMinutes(intervals);
-        summary.digitalSignalScore = calculateDigitalSignalScore(summary);
-        summary.digitalPattern = getDigitalPattern(summary.digitalSignalScore);
+        summary.nightUsageMinutes = Math.min(180, nightMillis / (1000 * 60));
+        summary.shortSessionCount = shortSessions;
+
+        if (summary.totalUsageMinutes == 0) {
+            summary.digitalPattern = "활동 감지 안됨";
+        } else {
+            summary.digitalSignalScore = calculateDigitalSignalScore(summary);
+            summary.digitalPattern = getDigitalPattern(summary.digitalSignalScore);
+        }
 
         return summary;
     }
 
-    private static boolean shouldIgnorePackage(Context context, String pkg) {
-        if (pkg == null) return true;
-
-        String lower = pkg.toLowerCase(Locale.ROOT);
-
-        return lower.contains("launcher")
-                || lower.contains("systemui")
-                || lower.contains("permissioncontroller")
-                || lower.contains("packageinstaller")
-                || lower.contains("settings")
-                || pkg.equals(context.getPackageName());
+    private static void addInterval(List<AppInterval> intervals, String pkg, long start, long end, long queryStart, long queryEnd) {
+        long safeStart = Math.max(start, queryStart);
+        long safeEnd = Math.min(end, queryEnd);
+        if (pkg != null && safeEnd > safeStart) {
+            intervals.add(new AppInterval(pkg, safeStart, safeEnd));
+        }
     }
 
-    private static long calculateMergedUsageMinutes(List<AppInterval> intervals) {
+    private static long calculateMergedUsageMillis(List<AppInterval> intervals) {
         if (intervals.isEmpty()) return 0L;
-
-        intervals.sort((a, b) -> Long.compare(a.start, b.start));
-
-        long totalMillis = 0L;
+        long total = 0L;
         long currentStart = intervals.get(0).start;
         long currentEnd = intervals.get(0).end;
 
         for (int i = 1; i < intervals.size(); i++) {
             AppInterval next = intervals.get(i);
-
             if (next.start <= currentEnd) {
                 currentEnd = Math.max(currentEnd, next.end);
             } else {
-                totalMillis += currentEnd - currentStart;
+                total += currentEnd - currentStart;
                 currentStart = next.start;
                 currentEnd = next.end;
             }
         }
-
-        totalMillis += currentEnd - currentStart;
-
-        return totalMillis / (1000 * 60);
+        total += currentEnd - currentStart;
+        return total;
     }
 
-    private static long calculateNightUsageMinutes(long start, long end) {
+    private static List<AppInterval> mergeIntervals(List<AppInterval> intervals) {
+        if (intervals.isEmpty()) return new ArrayList<>();
+        intervals.sort((a, b) -> Long.compare(a.start, b.start));
+
+        List<AppInterval> merged = new ArrayList<>();
+        AppInterval current = new AppInterval(intervals.get(0).packageName, intervals.get(0).start, intervals.get(0).end);
+
+        for (int i = 1; i < intervals.size(); i++) {
+            AppInterval next = intervals.get(i);
+            if (next.start <= current.end) {
+                current.end = Math.max(current.end, next.end);
+            } else {
+                merged.add(current);
+                current = new AppInterval(next.packageName, next.start, next.end);
+            }
+        }
+        merged.add(current);
+        return merged;
+    }
+
+    private static List<AppInterval> mergeIntervalsByPackage(List<AppInterval> intervals) {
+        if (intervals.isEmpty()) return new ArrayList<>();
+        
+        // 시간순 정렬
+        intervals.sort((a, b) -> Long.compare(a.start, b.start));
+
+        List<AppInterval> merged = new ArrayList<>();
+        AppInterval current = new AppInterval(intervals.get(0).packageName, intervals.get(0).start, intervals.get(0).end);
+
+        for (int i = 1; i < intervals.size(); i++) {
+            AppInterval next = intervals.get(i);
+            
+            // 동일한 앱이면서 시간 간격이 10초 이내인 경우 하나의 세션으로 간주
+            if (next.packageName.equals(current.packageName) && next.start <= (current.end + 10000L)) {
+                current.end = Math.max(current.end, next.end);
+            } else {
+                merged.add(current);
+                current = new AppInterval(next.packageName, next.start, next.end);
+            }
+        }
+        merged.add(current);
+        return merged;
+    }
+
+    private static long calculateNightUsageFromMerged(List<AppInterval> mergedTimeline, long baseStartTime) {
         Calendar nightStart = Calendar.getInstance();
-        nightStart.setTimeInMillis(start);
+        nightStart.setTimeInMillis(baseStartTime);
         nightStart.set(Calendar.HOUR_OF_DAY, 0);
         nightStart.set(Calendar.MINUTE, 0);
         nightStart.set(Calendar.SECOND, 0);
@@ -185,12 +287,39 @@ public class UsageStatsHelper {
         Calendar nightEnd = (Calendar) nightStart.clone();
         nightEnd.set(Calendar.HOUR_OF_DAY, 3);
 
-        long overlapStart = Math.max(start, nightStart.getTimeInMillis());
-        long overlapEnd = Math.min(end, nightEnd.getTimeInMillis());
+        long nStart = nightStart.getTimeInMillis();
+        long nEnd = nightEnd.getTimeInMillis();
 
-        if (overlapEnd <= overlapStart) return 0L;
+        long nightMillis = 0;
+        for (AppInterval interval : mergedTimeline) {
+            long overlapStart = Math.max(interval.start, nStart);
+            long overlapEnd = Math.min(interval.end, nEnd);
+            if (overlapEnd > overlapStart) {
+                nightMillis += (overlapEnd - overlapStart);
+            }
+        }
+        return nightMillis / (1000 * 60);
+    }
 
-        return (overlapEnd - overlapStart) / (1000 * 60);
+    private static boolean shouldIgnorePackage(Context context, String pkg) {
+        if (pkg == null) return true;
+        String lower = pkg.toLowerCase(Locale.ROOT);
+
+        // 시스템 필수 패키지 및 백그라운드 노이즈 필터링 강화
+        return lower.contains("launcher")
+                || lower.contains("systemui")
+                || lower.contains("permissioncontroller")
+                || lower.contains("packageinstaller")
+                || lower.contains("gms") // Google Play Services
+                || lower.contains("inputmethod") // 키보드
+                || pkg.equals(context.getPackageName());
+    }
+
+    private static long calculateMergedUsageMinutes(List<AppInterval> intervals) {
+        List<AppInterval> merged = mergeIntervals(intervals);
+        long total = 0;
+        for (AppInterval i : merged) total += (i.end - i.start);
+        return total / (1000 * 60);
     }
 
     private static int calculateDigitalSignalScore(PhoneUsageSummary summary) {

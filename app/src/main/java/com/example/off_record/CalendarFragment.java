@@ -338,19 +338,25 @@ public class CalendarFragment extends Fragment {
         View detailContainer = (View) detailText.getParent();
         if (detailContainer != null) {
             detailContainer.setOnClickListener(v -> {
-                String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                         data.get("timestamp") != null ? data.get("timestamp") : dateKey + " 00:00",
                         emotion,
                         finalScore,
                         finalDiary,
-                        data.get("meals"),
-                        data.get("influence"),
+                        safeString(data.get("meals")),
+                        safeString(data.get("influence")),
                         finalStress,
-                        data.get("fatigue"),
-                        data.get("sleep"),
-                        data.get("need"),
-                        data.get("feedback"),
-                        data.get("resultText")
+                        safeString(data.get("fatigue")),
+                        safeString(data.get("sleep")),
+                        safeString(data.get("need")),
+                        safeString(data.get("feedback")),
+                        safeString(data.get("resultText")),
+                        safeString(data.get("phoneTotalMinutes")),
+                        safeString(data.get("phoneOpenCount")),
+                        safeString(data.get("phoneShortSessionCount")),
+                        safeString(data.get("phoneNightUsageMinutes")),
+                        safeString(data.get("digitalSignalScore")),
+                        safeString(data.get("digitalPattern"))
                 );
 
                 RecordDetailFragment fragment = new RecordDetailFragment();
@@ -364,6 +370,13 @@ public class CalendarFragment extends Fragment {
                         .commit();
             });
         }
+    }
+
+    private String safeString(Object value) {
+        if (value == null) return "";
+        String text = String.valueOf(value);
+        if ("null".equals(text)) return "";
+        return text;
     }
 
     private void showRecordEmoji(String emotion) {
