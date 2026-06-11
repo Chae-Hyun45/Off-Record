@@ -161,6 +161,7 @@ public class SettingsFragment extends Fragment {
         if (tvLogout != null) {
             tvLogout.setOnClickListener(v -> {
                 mAuth.signOut();
+                InputFragment.resetCache();
                 if (getContext() != null) {
                     Toast.makeText(getContext(), "로그아웃 되었습니다.", Toast.LENGTH_SHORT).show();
                 }
