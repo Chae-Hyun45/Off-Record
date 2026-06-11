@@ -32,6 +32,7 @@ import com.google.firebase.ai.type.GenerativeBackend;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
@@ -164,38 +165,34 @@ public class InputFragment extends Fragment {
         loadCustomQuestion(latestDiaryText, latestDiaryDate);
 
 
-        if (allRecords.contains(today)) {
-            String[] recordsArray = allRecords.split("##");
-            for (String record : recordsArray) {
-                if (record.startsWith(today)) {
-                    String[] detail = record.split("\\|");
-
-                    if (detail.length >= 5) {
-                        if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
-                        updateEmotionHighlight(view);
-
-                        seekBar.setProgress(Integer.parseInt(detail[2]));
-                        tvScoreValue.setText(detail[2] + "점");
-                        etDiary.setText(detail[3]);
-
-                        cbBreakfast.setChecked(detail[4].contains("아침"));
-                        cbLunch.setChecked(detail[4].contains("점심"));
-                        cbDinner.setChecked(detail[4].contains("저녁"));
-                        cbLateNight.setChecked(detail[4].contains("야식"));
-                    }
-
-                    if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
-                    if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
-                    if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
-                    if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
-                    if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
-
-                    if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
-                    break;
-                }
-            }
+        if (currentUser != null) {
+            // 로그인 사용자는 Firestore에 저장된 오늘 기록을 기준으로 입력 화면을 복원
+            loadTodayRecordFromFirestore(
+                    view,
+                    currentUser.getUid(),
+                    today,
+                    seekBar,
+                    tvScoreValue,
+                    etDiary,
+                    cbBreakfast,
+                    cbLunch,
+                    cbDinner,
+                    cbLateNight
+            );
         } else {
-            updateEmotionHighlight(view);
+            // 게스트 사용자는 기존 로컬 SharedPreferences 기준으로 입력 화면을 복원
+            restoreTodayRecordFromLocal(
+                    view,
+                    allRecords,
+                    today,
+                    seekBar,
+                    tvScoreValue,
+                    etDiary,
+                    cbBreakfast,
+                    cbLunch,
+                    cbDinner,
+                    cbLateNight
+            );
         }
 
         if (btnComplete != null) {
@@ -234,6 +231,13 @@ public class InputFragment extends Fragment {
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
                 }
 
+                UsageStatsHelper.PhoneUsageSummary phoneSummary =
+                        UsageStatsHelper.getTodayUsageSummary(requireContext());
+
+                String phoneUsagePrompt = phoneSummary.toPromptText();
+
+                Log.d("PhoneUsagePrompt", phoneUsagePrompt);
+
                 String customPrompt = String.format(
                         "%s\n\n" +
                                 "지금 보내주는 정보는 나의 오늘 하루 데이터야. 너는 이 데이터들을 면밀히 분석해서 말해줘. " +
@@ -251,7 +255,17 @@ public class InputFragment extends Fragment {
                                 "🌟 [AI가 유저에게 던졌던 특별 맞춤 질문]: %s\n" +
                                 "🌟 [이 질문에 대해 유저가 적은 다이렉트 답변]: %s\n" +
                                 "- 오늘 나의 이야기: %s\n\n" +
-                                "위 데이터를 모두 반영해서 분석해줘. 특히 내가 원하는 피드백 방식에 맞춰서 답변해줘.",
+                                "[오늘의 휴대폰 사용 기반 행동 데이터]\n" +
+                                "%s\n\n" +
+                                "위 데이터를 모두 반영해서 분석해줘. " +
+                                "휴대폰 사용 데이터는 진단 목적이 아니라 생활 패턴 참고용이야. " +
+                                "불안, 스트레스, 회피성 사용 가능성을 단정하지 말고 가능성 중심으로 조심스럽게 분석해줘. " +
+                                "특히 내가 원하는 피드백 방식에 맞춰서 답변해줘."+
+                                "휴대폰 사용 데이터는 참고용 보조 지표일 뿐이며, 심리 상태를 확정하거나 진단하지 마. " +
+                                "앱 실행 횟수나 짧은 반복 사용이 많더라도 반드시 불안이라고 단정하지 말고, " +
+                                "사용자가 피곤하거나 바빠서 자주 확인했을 가능성도 함께 고려해줘. " +
+                                "말투는 '귀하' 같은 딱딱한 표현을 쓰지 말고, 사용자를 '당신' 또는 자연스러운 말투로 불러줘. " +
+                                "너무 진단 보고서처럼 쓰지 말고, 따뜻하지만 과하게 단정하지 않는 말투로 작성해줘. ",
                         aiRoll,
                         emotionLabel,
                         seekBar.getProgress(),
@@ -264,7 +278,8 @@ public class InputFragment extends Fragment {
                         feedbackValue,
                         aiQuestionValue,
                         aiAnswerValue.trim().isEmpty() ? "답변 없음" : aiAnswerValue,
-                        diaryValue
+                        diaryValue,
+                        phoneUsagePrompt
                 );
 
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
@@ -304,25 +319,194 @@ public class InputFragment extends Fragment {
                 // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
                 askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), diaryValue);
 
-                if (getActivity() != null) {
-                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra);
-                    }
-                }
             });
         }
 
         return view;
     }
 
+
+    private void loadTodayRecordFromFirestore(
+            View view,
+            String uid,
+            String today,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        if (db == null || uid == null || today == null) {
+            updateEmotionHighlight(view);
+            return;
+        }
+
+        db.collection("users")
+                .document(uid)
+                .collection("daily_records")
+                .document(today)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!isAdded()) return;
+
+                    if (documentSnapshot == null || !documentSnapshot.exists()) {
+                        updateEmotionHighlight(view);
+                        return;
+                    }
+
+                    restoreInputFromFirestoreDocument(
+                            view,
+                            documentSnapshot,
+                            seekBar,
+                            tvScoreValue,
+                            etDiary,
+                            cbBreakfast,
+                            cbLunch,
+                            cbDinner,
+                            cbLateNight
+                    );
+                })
+                .addOnFailureListener(e -> {
+                    Log.w("Firestore", "오늘 기록 불러오기 실패", e);
+                    if (isAdded()) {
+                        updateEmotionHighlight(view);
+                    }
+                });
+    }
+
+    private void restoreInputFromFirestoreDocument(
+            View view,
+            DocumentSnapshot document,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        String emotion = document.getString("emotion");
+        if (emotion != null && !emotion.trim().isEmpty()) {
+            selectedEmotion = normalizeEmotionValue(emotion);
+        }
+        updateEmotionHighlight(view);
+
+        Long scoreLong = document.getLong("score");
+        int score = (scoreLong != null) ? scoreLong.intValue() : 80;
+        seekBar.setProgress(score);
+        tvScoreValue.setText(score + "점");
+
+        String diary = document.getString("diary");
+        etDiary.setText(diary != null ? diary : "");
+
+        String meals = document.getString("meals");
+        if (meals == null) meals = "";
+        cbBreakfast.setChecked(meals.contains("아침"));
+        cbLunch.setChecked(meals.contains("점심"));
+        cbDinner.setChecked(meals.contains("저녁"));
+        cbLateNight.setChecked(meals.contains("야식"));
+
+        setRadioCheckedByText(rgInfluence, document.getString("influence"));
+        setRadioCheckedByText(rgStress, document.getString("stress"));
+        setRadioCheckedByText(rgFatigue, document.getString("fatigue"));
+        setRadioCheckedByText(rgSleep, document.getString("sleep"));
+        setRadioCheckedByText(rgNeed, document.getString("need"));
+        setRadioCheckedByText(rgFeedback, document.getString("feedback"));
+
+        String aiQuestion = document.getString("aiQuestion");
+        if (tvAiQuestion != null && aiQuestion != null && !aiQuestion.trim().isEmpty()) {
+            tvAiQuestion.setText(aiQuestion);
+        }
+
+        String aiAnswer = document.getString("aiAnswer");
+        if (etAiAnswer != null && aiAnswer != null && !aiAnswer.trim().isEmpty()) {
+            etAiAnswer.setText(aiAnswer);
+        }
+
+        Log.d("InputFragment", "Firestore 오늘 기록을 입력 화면에 복원했습니다.");
+    }
+
+    private void restoreTodayRecordFromLocal(
+            View view,
+            String allRecords,
+            String today,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        if (allRecords == null || !allRecords.contains(today)) {
+            updateEmotionHighlight(view);
+            return;
+        }
+
+        String[] recordsArray = allRecords.split("##");
+        for (String record : recordsArray) {
+            if (record.startsWith(today)) {
+                String[] detail = record.split("\\|");
+
+                if (detail.length >= 5) {
+                    if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
+                    updateEmotionHighlight(view);
+
+                    try {
+                        seekBar.setProgress(Integer.parseInt(detail[2]));
+                        tvScoreValue.setText(detail[2] + "점");
+                    } catch (NumberFormatException e) {
+                        seekBar.setProgress(80);
+                        tvScoreValue.setText("80점");
+                    }
+
+                    etDiary.setText(detail[3]);
+
+                    cbBreakfast.setChecked(detail[4].contains("아침"));
+                    cbLunch.setChecked(detail[4].contains("점심"));
+                    cbDinner.setChecked(detail[4].contains("저녁"));
+                    cbLateNight.setChecked(detail[4].contains("야식"));
+                }
+
+                if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
+                if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
+                if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
+                if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
+                if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
+                if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
+
+                if (detail.length > 11 && tvAiQuestion != null) {
+                    tvAiQuestion.setText(detail[11]);
+                }
+
+                if (detail.length > 12 && etAiAnswer != null) {
+                    etAiAnswer.setText(detail[12]);
+                }
+
+                break;
+            }
+        }
+    }
+
     private void saveRecord(String fullTime, String mealInfo, int score, String diary, String resultText) {
+        Context context = getContext();
+
+        // Gemini 응답이 늦게 돌아온 뒤 Fragment가 이미 화면에서 떨어져 있으면 requireContext()로 튕길 수 있음
+        if (context == null) {
+            Log.w("InputFragment", "Fragment context is null. Skip saving record.");
+            return;
+        }
+
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
+
         String normalizedEmotion = normalizeEmotionValue(selectedEmotion);
         record.put("emotion", normalizedEmotion);
         record.put("emotionLabel", getEmotionLabel(normalizedEmotion));
         record.put("emotionScore", getEmotionScore(normalizedEmotion));
+
         record.put("score", score);
         record.put("diary", diary);
         record.put("meals", mealInfo);
@@ -333,9 +517,18 @@ public class InputFragment extends Fragment {
         record.put("need", getSelectedText(rgNeed));
         record.put("feedback", getSelectedText(rgFeedback));
 
+        UsageStatsHelper.PhoneUsageSummary phoneSummary =
+                UsageStatsHelper.getTodayUsageSummary(context);
+
+        record.put("phoneTotalMinutes", phoneSummary.totalUsageMinutes);
+        record.put("phoneOpenCount", phoneSummary.totalOpenCount);
+        record.put("phoneShortSessionCount", phoneSummary.shortSessionCount);
+        record.put("phoneNightUsageMinutes", phoneSummary.nightUsageMinutes);
+        record.put("digitalSignalScore", phoneSummary.digitalSignalScore);
+        record.put("digitalPattern", phoneSummary.digitalPattern);
+
         record.put("aiQuestion", (tvAiQuestion != null) ? tvAiQuestion.getText().toString() : "");
         record.put("aiAnswer", (etAiAnswer != null) ? etAiAnswer.getText().toString() : "");
-
         record.put("resultText", resultText);
 
         String dateId = fullTime.split(" ")[0];
@@ -349,14 +542,14 @@ public class InputFragment extends Fragment {
                     .document(dateId)
                     .set(record)
                     .addOnSuccessListener(aVoid -> {
-                        android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
+                        Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
                     })
                     .addOnFailureListener(e -> {
-                        android.util.Log.w("Firestore", "기록 저장 실패", e);
+                        Log.w("Firestore", "기록 저장 실패", e);
                     });
         } else {
-            GuestRecordStore.saveTodayRecord(getContext(), record, dateId);
-            android.util.Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
+            GuestRecordStore.saveTodayRecord(context, record, dateId);
+            Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
         }
     }
 
@@ -609,19 +802,25 @@ public class InputFragment extends Fragment {
     }
 
     private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
-        if (model == null || getContext() == null) return;
+        Context context = getContext();
+        if (model == null || context == null) return;
 
         Content prompt = new Content.Builder().addText(userPrompt).build();
-        Executor executor = ContextCompat.getMainExecutor(requireContext());
+        Executor executor = ContextCompat.getMainExecutor(context);
         ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
 
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
-                String resultText = result.getText();
+                String resultText = (result != null) ? result.getText() : null;
+
+                if (resultText == null || resultText.trim().isEmpty()) {
+                    resultText = "AI 피드백을 생성하지 못했어요.";
+                }
+
                 saveRecord(fullTime, mealInfo, score, diary, resultText);
 
-                if (getActivity() != null) {
+                if (isAdded() && getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
                     if (bottomNav != null) {
                         bottomNav.setSelectedItemId(R.id.extra);
