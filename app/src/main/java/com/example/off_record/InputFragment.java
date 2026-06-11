@@ -55,6 +55,11 @@ public class InputFragment extends Fragment {
     private static String cachedAiQuestion = "";
     private static String cachedQuestionTargetDate = "";
 
+    public static void resetCache() {
+        cachedAiQuestion = "";
+        cachedQuestionTargetDate = "";
+    }
+
     @SuppressLint("MissingInflatedId")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -116,6 +121,14 @@ public class InputFragment extends Fragment {
         setupToggleableRadioGroup(rgFeedback);
 
         clearAllGroups();
+        etDiary.setText("");
+        etAiAnswer.setText("");
+        cbBreakfast.setChecked(false);
+        cbLunch.setChecked(false);
+        cbDinner.setChecked(false);
+        cbLateNight.setChecked(false);
+        seekBar.setProgress(80);
+        tvScoreValue.setText("80점");
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
         String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
@@ -288,14 +301,15 @@ public class InputFragment extends Fragment {
                 cachedAiQuestion = "";
                 cachedQuestionTargetDate = "";
 
+                // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
+                askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), diaryValue);
+
                 if (getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
                     if (bottomNav != null) {
                         bottomNav.setSelectedItemId(R.id.extra);
                     }
                 }
-
-                askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), diaryValue);
             });
         }
 
@@ -595,7 +609,7 @@ public class InputFragment extends Fragment {
     }
 
     private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
-        if (model == null) return;
+        if (model == null || getContext() == null) return;
 
         Content prompt = new Content.Builder().addText(userPrompt).build();
         Executor executor = ContextCompat.getMainExecutor(requireContext());
