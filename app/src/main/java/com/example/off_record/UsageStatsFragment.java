@@ -411,6 +411,7 @@ public class UsageStatsFragment extends Fragment {
             LinearLayout.LayoutParams columnParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             llWeeklyChart.addView(column, columnParams);
 
+            /*
             TextView timeLabel = new TextView(getContext());
             timeLabel.setText(formatDurationTwoLine(millis));
             timeLabel.setTextColor(isSelected ? COLOR_TEXT_MAIN : COLOR_TEXT_SUB);
@@ -421,6 +422,7 @@ public class UsageStatsFragment extends Fragment {
 
             View spacer = new View(getContext());
             column.addView(spacer, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(8)));
+            */
 
             View bar = new View(getContext());
             int barHeight = millis <= 0 ? dp(10) : (int) Math.max(dp(10), (millis * dp(96)) / (float) max);
