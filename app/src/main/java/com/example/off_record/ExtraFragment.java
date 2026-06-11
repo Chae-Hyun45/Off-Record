@@ -110,19 +110,25 @@ public class ExtraFragment extends Fragment {
                         itemView.setClickable(true);
                         itemView.setFocusable(true);
                         itemView.setOnClickListener(v -> {
-                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                                     fullDate,
                                     emotion,
                                     score,
                                     diary,
-                                    doc.getString("meals"),
-                                    doc.getString("influence"),
-                                    doc.getString("stress"),
-                                    doc.getString("fatigue"),
-                                    doc.getString("sleep"),
-                                    doc.getString("need"),
-                                    doc.getString("feedback"),
-                                    doc.getString("resultText")
+                                    safeString(doc.get("meals")),
+                                    safeString(doc.get("influence")),
+                                    safeString(doc.get("stress")),
+                                    safeString(doc.get("fatigue")),
+                                    safeString(doc.get("sleep")),
+                                    safeString(doc.get("need")),
+                                    safeString(doc.get("feedback")),
+                                    safeString(doc.get("resultText")),
+                                    safeString(doc.get("phoneTotalMinutes")),
+                                    safeString(doc.get("phoneOpenCount")),
+                                    safeString(doc.get("phoneShortSessionCount")),
+                                    safeString(doc.get("phoneNightUsageMinutes")),
+                                    safeString(doc.get("digitalSignalScore")),
+                                    safeString(doc.get("digitalPattern"))
                             );
 
                             RecordDetailFragment fragment = new RecordDetailFragment();
@@ -187,19 +193,25 @@ public class ExtraFragment extends Fragment {
         itemView.setClickable(true);
         itemView.setFocusable(true);
         itemView.setOnClickListener(v -> {
-            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                     fullDate,
                     emotion,
                     score,
                     diary,
-                    record.get("meals"),
-                    record.get("influence"),
-                    record.get("stress"),
-                    record.get("fatigue"),
-                    record.get("sleep"),
-                    record.get("need"),
-                    record.get("feedback"),
-                    record.get("resultText")
+                    safeString(record.get("meals")),
+                    safeString(record.get("influence")),
+                    safeString(record.get("stress")),
+                    safeString(record.get("fatigue")),
+                    safeString(record.get("sleep")),
+                    safeString(record.get("need")),
+                    safeString(record.get("feedback")),
+                    safeString(record.get("resultText")),
+                    safeString(record.get("phoneTotalMinutes")),
+                    safeString(record.get("phoneOpenCount")),
+                    safeString(record.get("phoneShortSessionCount")),
+                    safeString(record.get("phoneNightUsageMinutes")),
+                    safeString(record.get("digitalSignalScore")),
+                    safeString(record.get("digitalPattern"))
             );
 
             RecordDetailFragment fragment = new RecordDetailFragment();
