@@ -262,7 +262,7 @@
                 <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
                     <RelativeLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginBottom="10dp">
                         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="오늘의 이야기" android:textStyle="bold" android:layout_centerVertical="true"/>
-                        <ImageButton android:id="@+id/btnVoiceInput" android:layout_width="40dp" android:layout_height="40dp" android:layout_alignParentEnd="true" android:src="@android:drawable/ic_btn_speak_now" android:background="?attr/selectableItemBackgroundBorderless" app:tint="#4CAF50"/>
+                        <ImageButton android:id="@+id/btnVoiceInput" android:layout_width="40dp" android:layout_height="40dp" android:layout_alignParentEnd="true" android:src="@android:drawable/ic_btn_speak_now" android:background="?attr/selectableItemBackgroundBorderless" app:tint="#4CAF50"/>  //마이크 모양 버튼
                     </RelativeLayout>
                     <EditText android:id="@+id/etDiary" android:layout_width="match_parent" android:layout_height="120dp" android:hint="더 들려주고 싶은 이야기가 있나요?" android:background="@null" android:gravity="top" android:textSize="14sp" android:inputType="textMultiLine"/>
                 </LinearLayout>

@@ -29,6 +29,7 @@ import com.google.firebase.ai.java.GenerativeModelFutures;
 import com.google.firebase.ai.type.Content;
 import com.google.firebase.ai.type.GenerateContentResponse;
 import com.google.firebase.ai.type.GenerativeBackend;
+import com.google.firebase.ai.type.Part;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -48,12 +49,39 @@ public class InputFragment extends Fragment {
     private GenerativeModelFutures model;
     private TextView tvResultView;
 
+    private ImageButton btnVoiceInput;
+    private boolean isRecording = false;       // 현재 녹음 중인지 상태 체크
+    private android.media.MediaRecorder recorder = null;
+    private java.io.File audioFile = null;     // 녹음본이 임시 저장될 파일 경로
+    private byte[] recordedAudioBytes = null;  // Gemini에게 보낼 바이트 배열
+    private final String audioMimeType = "audio/wav"; // 재생용 MIME 타입
+
     @SuppressLint("MissingInflatedId")
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_input, container, false);
 
         db = FirebaseFirestore.getInstance();
+
+        btnVoiceInput = view.findViewById(R.id.btnVoiceInput);
+
+        if (btnVoiceInput != null) {
+            btnVoiceInput.setOnClickListener(v -> {
+                // 녹음 권한 확인 (RECORD_AUDIO)
+                if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.RECORD_AUDIO)
+                        != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 200);
+                    return;
+                }
+
+                // 토글 제어: 녹음 중이 아니면 시작, 녹음 중이면 중지
+                if (!isRecording) {
+                    startRecording();
+                } else {
+                    stopRecording();
+                }
+            });
+        }
 
         try {
             // GenerativeModel 초기화
@@ -168,6 +196,14 @@ public class InputFragment extends Fragment {
                 }else{
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
                 }
+
+                String diaryText = etDiary.getText().toString().trim();
+
+                if (diaryText.isEmpty() && (recordedAudioBytes == null || recordedAudioBytes.length == 0)) {
+                    android.widget.Toast.makeText(getContext(), "오늘의 이야기나 음성 녹음을 남겨주세요!", android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
                         fullTime,
                         selectedEmotion,
@@ -180,6 +216,7 @@ public class InputFragment extends Fragment {
                         getSelectedText(rgSleep),
                         getSelectedText(rgNeed),
                         getSelectedText(rgFeedback));
+
 
                 SharedPreferences.Editor editor = pref.edit();
                 String oldRecords = pref.getString("all_records", "");
@@ -232,7 +269,7 @@ public class InputFragment extends Fragment {
                         etDiary.getText().toString()
                 );
                 // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
-                askGemini(customPrompt, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
+                askGemini(customPrompt, recordedAudioBytes, audioMimeType, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
             });
         }
 
@@ -428,10 +465,32 @@ public class InputFragment extends Fragment {
         }
     }
 
-    private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
+    private void askGemini(String userPrompt, byte[] audioBytes, String mimeType, String fullTime, String mealInfo, int score, String diary) {
         if (model == null) return;
 
-        Content prompt = new Content.Builder().addText(userPrompt).build();
+        Content.Builder contentBuilder = new Content.Builder();
+
+        if (diary.trim().isEmpty()) {
+            String audioInstructions = "\n\n★[음성 녹음 처리 필수 규칙]★\n" +
+                    "너는 함께 첨부된 [음성 데이터]를 귀로 듣고 사용자가 말한 받아쓰기(STT) 내용을 파악해야 해.\n" +
+                    "그리고 반드시 답변의 '최상단 첫 줄'에 유저가 말한 내용 그대로를 받아적어줘.\n" +
+                    "그 바로 아랫줄에 '===STT_END===' 라는 구분자를 정확히 적고, " +
+                    "그 다음 줄부터 사용자를 향한 따뜻한 위로와 피드백 대사를 이어가 줘. 사용자의 음성을 듣고 '템포', '톤' 등등을 확인해서 종합적으로 분석해줘.\n\n" +
+                    "응답 예시:\n" +
+                    "오늘 팀플 과제 때문에 너무 스트레스 받았어\n" +
+                    "===STT_END===\n" +
+                    "목소리 톤에 스트레스와 피로가 묻어나네요... 오늘 정말 고생 많으셨어요.";
+            contentBuilder.addText(audioInstructions + userPrompt);
+        } else {
+            contentBuilder.addText(userPrompt);
+        }
+
+        if (audioBytes != null && audioBytes.length > 0) {
+            contentBuilder.addInlineData(audioBytes, mimeType);
+            Log.d("Gemini", "오디오 데이터 빌더에 삽입 완료: " + audioBytes.length + " bytes");
+        }
+
+        Content prompt = contentBuilder.build();
         Executor executor = ContextCompat.getMainExecutor(requireContext());
         ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
 
@@ -440,9 +499,29 @@ public class InputFragment extends Fragment {
             public void onSuccess(GenerateContentResponse result) {
                 String resultText = result.getText(); // AI 답변 추출
 
+                String finalDiary = diary;
+                String cleanAiResponse = resultText;
+
+                if (finalDiary.trim().isEmpty() && resultText != null && resultText.contains("===STT_END===")) {
+                    try {
+                        String[] parts = resultText.split("===STT_END===");
+                        if (parts.length >= 2) {
+                            finalDiary = parts[0].trim();       //STT
+                            cleanAiResponse = parts[1].trim();  //AiResponse
+                        }
+                    } catch (Exception e) {
+                        Log.e("GeminiParse", "STT 문장 쪼개기 실패", e);
+                    }
+                }
+
+                if (finalDiary.trim().isEmpty()) {
+                    finalDiary = "음성 녹음 과정에서 문제가 발생했어요...😥";
+                }
 
                 // 3. AI 답변을 포함하여 최종 저장
-                saveRecord(fullTime, mealInfo, score, diary, resultText);
+                saveRecord(fullTime, mealInfo, score, finalDiary, cleanAiResponse);
+
+                clearTemporaryAudioData();
 
                 // 4. 하단 네비게이션을 통해 화면 이동
                 if (getActivity() != null) {
@@ -460,12 +539,109 @@ public class InputFragment extends Fragment {
         }, executor);
     }
 
+    private void clearTemporaryAudioData() {
+        try {
+            if (audioFile != null && audioFile.exists()) {
+                boolean deleted = audioFile.delete();
+                Log.d("AudioClean", "임시 오디오 파일 삭제 완료: " + deleted);
+            }
+            recordedAudioBytes = null; // 대용량 바이트 배열 가비지 컬렉터(GC)로 반환
+            audioFile = null;
+        } catch (Exception e) {
+            Log.e("AudioClean", "임시 데이터 정리 중 에러", e);
+        }
+    }
+
     private void navigateToExtra(){
         if (getActivity() != null) {
             BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
             if (bottomNav != null) {
                 bottomNav.setSelectedItemId(R.id.extra);
             }
+        }
+    }
+
+    private void startRecording() {
+        try {
+            // 새로 녹음 버튼을 누르면 이전 녹음 파일과 바이트 배열을 메모리에서 해제하여 초기화!
+            if (audioFile != null && audioFile.exists()) {
+                audioFile.delete();
+            }
+            recordedAudioBytes = null;
+
+            audioFile = java.io.File.createTempFile("off_record_audio", ".wav", requireContext().getCacheDir());
+
+            recorder = new android.media.MediaRecorder();
+            recorder.setAudioSource(android.media.MediaRecorder.AudioSource.MIC);
+            recorder.setOutputFormat(android.media.MediaRecorder.OutputFormat.THREE_GPP);
+            recorder.setAudioEncoder(android.media.MediaRecorder.AudioEncoder.AMR_NB);
+            recorder.setOutputFile(audioFile.getAbsolutePath());
+
+            recorder.prepare();
+            recorder.start();
+
+            isRecording = true;
+            btnVoiceInput.setColorFilter(android.graphics.Color.RED);
+            android.widget.Toast.makeText(getContext(), "녹음을 시작합니다...", android.widget.Toast.LENGTH_SHORT).show();
+
+        } catch (java.io.IOException e) {
+            Log.e("AudioRecord", "녹음 시작 실패", e);
+        }
+    }
+
+    private void stopRecording() {
+        if (recorder != null) {
+            try {
+                recorder.stop();
+                recorder.release();
+
+                if (audioFile != null && audioFile.exists()) {
+                    long fileSize = audioFile.length();
+                    android.util.Log.d("AudioRecord", "녹음 완료. 파일 경로: " + audioFile.getAbsolutePath());
+                    android.util.Log.d("AudioRecord", "최종 파일 크기: " + fileSize + " bytes");
+
+                    if (fileSize > 1000) { // 대략 1KB 이상이면 데이터가 담긴 것
+                        android.util.Log.d("AudioRecord", "소리데이터가 저장되었습니다.");
+                    } else {
+                        android.util.Log.w("AudioRecord", "파일 크기가 너무 작습니다. 녹음이 안 되었을 수 있습니다.");
+                    }
+                }
+
+                recorder = null;
+                isRecording = false;
+
+                // 버튼 색상 원상복구 (초록색)
+                btnVoiceInput.setColorFilter(android.graphics.Color.parseColor("#4CAF50"));
+                android.widget.Toast.makeText(getContext(), "녹음이 완료되었습니다.", android.widget.Toast.LENGTH_SHORT).show();
+
+                // 3. 임시 저장된 오디오 파일을 바이트 배열(byte[])로 변환하여 보관
+                if (audioFile != null && audioFile.exists()) {
+                    java.io.FileInputStream fis = new java.io.FileInputStream(audioFile);
+                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                    byte[] buffer = new byte[1024];
+                    int read;
+                    while ((read = fis.read(buffer)) != -1) {
+                        baos.write(buffer, 0, read);
+                    }
+                    fis.close();
+
+                    // 전역변수에 바이트 배열 백업! (이제 btnComplete 누를 때 배달됩니다)
+                    recordedAudioBytes = baos.toByteArray();
+
+                }
+            } catch (Exception e) {
+                Log.e("AudioRecord", "녹음 중지 및 파일 변환 실패", e);
+            }
+        }
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        // 화면이 꺼지거나 나갈 때 녹음기가 돌고 있다면 안전하게 해제
+        if (recorder != null) {
+            recorder.release();
+            recorder = null;
         }
     }
 }
