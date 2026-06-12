@@ -35,6 +35,18 @@
                 android:layout_gravity="center"
                 android:layout_marginBottom="24dp"/>
 
+            <TextView
+                android:id="@+id/tvGuestNotice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_gravity="center_horizontal"
+                android:text="※ 비로그인 모드에서는 작성하신 일기가 당일 자정(24:00)까지만 유지됩니다."
+                android:textColor="#FF8800"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
