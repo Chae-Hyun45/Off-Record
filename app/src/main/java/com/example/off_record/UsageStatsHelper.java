@@ -126,9 +126,6 @@ public class UsageStatsHelper {
         long currentAppStartTime = 0L;
         UsageEvents.Event event = new UsageEvents.Event();
 
-        int totalOpenCount = 0;
-        String lastPkg = "";
-
         while (usageEvents.hasNextEvent()) {
             usageEvents.getNextEvent(event);
             String pkg = event.getPackageName();
@@ -143,11 +140,6 @@ public class UsageStatsHelper {
                 }
                 currentActiveApp = pkg;
                 currentAppStartTime = time;
-
-                if (!pkg.equals(lastPkg)) {
-                    totalOpenCount++;
-                    lastPkg = pkg;
-                }
             } else if (type == UsageEvents.Event.ACTIVITY_PAUSED) {
                 if (currentActiveApp != null && currentActiveApp.equals(pkg)) {
                     addInterval(rawIntervals, currentActiveApp, currentAppStartTime, time, startTime, endTime);
@@ -164,7 +156,11 @@ public class UsageStatsHelper {
         rawIntervals.sort((a, b) -> Long.compare(a.start, b.start));
         long totalMillis = calculateMergedUsageMillis(rawIntervals);
         summary.totalUsageMinutes = totalMillis / (1000 * 60);
-        summary.totalOpenCount = totalOpenCount;
+
+        // [수정] 앱 내 화면 전환 등으로 잘게 쪼개진 Raw Interval들을 패키지 단위 세션으로 병합
+        // 이렇게 해야 '짧은 반복 사용'이 '앱 실행 횟수'를 초과하는 논리적 오류를 방지할 수 있음
+        List<AppInterval> sessionIntervals = mergeIntervalsByPackage(rawIntervals);
+        summary.totalOpenCount = sessionIntervals.size();
 
         // 세부 지표 계산 (야간 사용 및 짧은 세션)
         long nightMillis = 0;
@@ -180,7 +176,7 @@ public class UsageStatsHelper {
         long nStart = cal.getTimeInMillis();
         long nEnd = nStart + (3 * 60 * 60 * 1000L); // 00:00 ~ 03:00
 
-        for (AppInterval interval : rawIntervals) {
+        for (AppInterval interval : sessionIntervals) {
             long duration = interval.end - interval.start;
             if (duration > 5000L && duration <= SHORT_SESSION_LIMIT) {
                 shortSessions++;
