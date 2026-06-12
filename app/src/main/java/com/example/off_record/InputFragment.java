@@ -29,7 +29,6 @@ import com.google.firebase.ai.java.GenerativeModelFutures;
 import com.google.firebase.ai.type.Content;
 import com.google.firebase.ai.type.GenerateContentResponse;
 import com.google.firebase.ai.type.GenerativeBackend;
-import com.google.firebase.ai.type.Part;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -49,7 +48,6 @@ public class InputFragment extends Fragment {
     private RadioGroup rgInfluence, rgStress, rgFatigue, rgSleep, rgNeed, rgFeedback;
     private FirebaseFirestore db;
     private GenerativeModelFutures model;
-    private TextView tvResultView;
     private TextView tvAiQuestion;
     private EditText etAiAnswer;
 
@@ -133,8 +131,6 @@ public class InputFragment extends Fragment {
         rgFeedback = view.findViewById(R.id.rgFeedback);
 
         View btnComplete = view.findViewById(R.id.btnComplete);
-
-        tvResultView = view.findViewById(R.id.tvResultView);
 
         tvAiQuestion = view.findViewById(R.id.tvAiQuestion);
         etAiAnswer = view.findViewById(R.id.etAiAnswer);
@@ -266,7 +262,6 @@ public class InputFragment extends Fragment {
                     return;
                 }
 
-                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
                 UsageStatsHelper.PhoneUsageSummary phoneSummary =
                         UsageStatsHelper.getTodayUsageSummary(requireContext());
 
@@ -827,6 +822,56 @@ public class InputFragment extends Fragment {
 
         Content prompt = contentBuilder.build();
         Executor executor = ContextCompat.getMainExecutor(requireContext());
+        ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
+
+        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
+            @Override
+            public void onSuccess(GenerateContentResponse result) {
+                String resultText = (result != null) ? result.getText() : null;
+
+                String finalDiary = diary;
+                String cleanAiResponse = resultText;
+
+                if (finalDiary.trim().isEmpty() && resultText != null && resultText.contains("===STT_END===")) {
+                    try {
+                        String[] parts = resultText.split("===STT_END===");
+                        if (parts.length >= 2) {
+                            finalDiary = parts[0].trim();       //STT
+                            cleanAiResponse = parts[1].trim();  //AiResponse
+                        }
+                    } catch (Exception e) {
+                        Log.e("GeminiParse", "STT 문장 쪼개기 실패", e);
+                    }
+                }
+
+                if (finalDiary.trim().isEmpty()) {
+                    finalDiary = "음성 녹음 과정에서 문제가 발생했어요...😥";
+                }
+
+                if (cleanAiResponse == null || cleanAiResponse.trim().isEmpty()) {
+                    cleanAiResponse = "AI 피드백을 생성하지 못했어요.";
+                }
+
+                // AI 답변을 포함하여 최종 저장
+                saveRecord(fullTime, mealInfo, score, finalDiary, cleanAiResponse);
+
+                clearTemporaryAudioData();
+
+                if (isAdded() && getActivity() != null) {
+                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
+                    if (bottomNav != null) {
+                        bottomNav.setSelectedItemId(R.id.extra);
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                Log.e("Gemini", "에러 발생: " + t.getMessage());
+            }
+        }, executor);
+    }
+
     private String normalizeEmotionValue(String emotionValue) {
         if (emotionValue == null) return "";
         String value = emotionValue.trim();
@@ -864,63 +909,6 @@ public class InputFragment extends Fragment {
         return 3;
     }
 
-    private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
-        Context context = getContext();
-        if (model == null || context == null) return;
-
-        Content prompt = new Content.Builder().addText(userPrompt).build();
-        Executor executor = ContextCompat.getMainExecutor(context);
-        ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
-
-        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
-            @Override
-            public void onSuccess(GenerateContentResponse result) {
-                String resultText = (result != null) ? result.getText() : null;
-
-                String finalDiary = diary;
-                String cleanAiResponse = resultText;
-
-                if (finalDiary.trim().isEmpty() && resultText != null && resultText.contains("===STT_END===")) {
-                    try {
-                        String[] parts = resultText.split("===STT_END===");
-                        if (parts.length >= 2) {
-                            finalDiary = parts[0].trim();       //STT
-                            cleanAiResponse = parts[1].trim();  //AiResponse
-                        }
-                    } catch (Exception e) {
-                        Log.e("GeminiParse", "STT 문장 쪼개기 실패", e);
-                    }
-                }
-
-                if (finalDiary.trim().isEmpty()) {
-                    finalDiary = "음성 녹음 과정에서 문제가 발생했어요...😥";
-                }
-
-                // 3. AI 답변을 포함하여 최종 저장
-                saveRecord(fullTime, mealInfo, score, finalDiary, cleanAiResponse);
-
-                clearTemporaryAudioData();
-                if (resultText == null || resultText.trim().isEmpty()) {
-                    resultText = "AI 피드백을 생성하지 못했어요.";
-                }
-
-                saveRecord(fullTime, mealInfo, score, diary, resultText);
-
-                if (isAdded() && getActivity() != null) {
-                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra);
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                Log.e("Gemini", "에러 발생: " + t.getMessage());
-            }
-        }, executor);
-    }
-
     private void clearTemporaryAudioData() {
         try {
             if (audioFile != null && audioFile.exists()) {
@@ -931,15 +919,6 @@ public class InputFragment extends Fragment {
             audioFile = null;
         } catch (Exception e) {
             Log.e("AudioClean", "임시 데이터 정리 중 에러", e);
-        }
-    }
-
-    private void navigateToExtra(){
-        if (getActivity() != null) {
-            BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-            if (bottomNav != null) {
-                bottomNav.setSelectedItemId(R.id.extra);
-            }
         }
     }
 
