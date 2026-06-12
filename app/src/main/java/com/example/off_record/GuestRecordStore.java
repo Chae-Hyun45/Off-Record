@@ -74,6 +74,7 @@ public class GuestRecordStore {
         record.put("sleep", pref.getString("sleep", "미선택"));
         record.put("need", pref.getString("need", "미선택"));
         record.put("feedback", pref.getString("feedback", "미선택"));
+        record.put("resultText", pref.getString("resultText", ""));
         record.put("aiQuestion", pref.getString("aiQuestion", ""));
         record.put("aiAnswer", pref.getString("aiAnswer", ""));
         record.put("resultText", pref.getString("resultText", ""));
