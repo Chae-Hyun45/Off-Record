@@ -48,7 +48,7 @@ public class InputFragment extends Fragment {
     private RadioGroup rgInfluence, rgStress, rgFatigue, rgSleep, rgNeed, rgFeedback;
     private FirebaseFirestore db;
     private GenerativeModelFutures model;
-    private TextView tvAiQuestion;
+    private TextView tvAiQuestion, tvVoiceStatus;
     private EditText etAiAnswer;
 
     // 🌟 [추가] 탭을 다시 누를 때 AI 질문이 새로 고쳐지는 것을 막기 위한 정적 캐시 장부
@@ -134,6 +134,7 @@ public class InputFragment extends Fragment {
 
         tvAiQuestion = view.findViewById(R.id.tvAiQuestion);
         etAiAnswer = view.findViewById(R.id.etAiAnswer);
+        tvVoiceStatus = view.findViewById(R.id.tvVoiceStatus);
 
         setupEmotionSelection(view);
         setupScoreInput(view);
@@ -148,6 +149,10 @@ public class InputFragment extends Fragment {
         clearAllGroups();
         etDiary.setText("");
         etAiAnswer.setText("");
+        if (tvVoiceStatus != null) {
+            tvVoiceStatus.setText("마이크 버튼을 눌러 이야기를 들려주세요");
+            tvVoiceStatus.setTextColor(android.graphics.Color.parseColor("#888888"));
+        }
         cbBreakfast.setChecked(false);
         cbLunch.setChecked(false);
         cbDinner.setChecked(false);
@@ -943,7 +948,10 @@ public class InputFragment extends Fragment {
 
             isRecording = true;
             btnVoiceInput.setColorFilter(android.graphics.Color.RED);
-            android.widget.Toast.makeText(getContext(), "녹음을 시작합니다...", android.widget.Toast.LENGTH_SHORT).show();
+            if (tvVoiceStatus != null) {
+                tvVoiceStatus.setText("녹음 중입니다... 다시 누르면 중지됩니다.");
+                tvVoiceStatus.setTextColor(android.graphics.Color.RED);
+            }
 
         } catch (java.io.IOException e) {
             Log.e("AudioRecord", "녹음 시작 실패", e);
@@ -973,7 +981,10 @@ public class InputFragment extends Fragment {
 
                 // 버튼 색상 원상복구 (초록색)
                 btnVoiceInput.setColorFilter(android.graphics.Color.parseColor("#4CAF50"));
-                android.widget.Toast.makeText(getContext(), "녹음이 완료되었습니다.", android.widget.Toast.LENGTH_SHORT).show();
+                if (tvVoiceStatus != null) {
+                    tvVoiceStatus.setText("음성 녹음 완료! (기록 완료 시 함께 분석됩니다)");
+                    tvVoiceStatus.setTextColor(android.graphics.Color.parseColor("#4CAF50"));
+                }
 
                 // 3. 임시 저장된 오디오 파일을 바이트 배열(byte[])로 변환하여 보관
                 if (audioFile != null && audioFile.exists()) {
