@@ -51,7 +51,6 @@ public class InputFragment extends Fragment {
     private TextView tvAiQuestion, tvVoiceStatus;
     private EditText etAiAnswer;
 
-    // 🌟 [추가] 탭을 다시 누를 때 AI 질문이 새로 고쳐지는 것을 막기 위한 정적 캐시 장부
     private static String cachedAiQuestion = "";
     private static String cachedQuestionTargetDate = "";
 
@@ -61,11 +60,11 @@ public class InputFragment extends Fragment {
     }
 
     private ImageButton btnVoiceInput;
-    private boolean isRecording = false;       // 현재 녹음 중인지 상태 체크
+    private boolean isRecording = false;
     private android.media.MediaRecorder recorder = null;
-    private java.io.File audioFile = null;     // 녹음본이 임시 저장될 파일 경로
-    private byte[] recordedAudioBytes = null;  // Gemini에게 보낼 바이트 배열
-    private final String audioMimeType = "audio/wav"; // 재생용 MIME 타입
+    private java.io.File audioFile = null;
+    private byte[] recordedAudioBytes = null;
+    private final String audioMimeType = "audio/wav";
 
     @SuppressLint("MissingInflatedId")
     @Override
@@ -73,19 +72,16 @@ public class InputFragment extends Fragment {
         View view = inflater.inflate(R.layout.fragment_input, container, false);
 
         db = FirebaseFirestore.getInstance();
-
         btnVoiceInput = view.findViewById(R.id.btnVoiceInput);
 
         if (btnVoiceInput != null) {
             btnVoiceInput.setOnClickListener(v -> {
-                // 녹음 권한 확인 (RECORD_AUDIO)
                 if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.RECORD_AUDIO)
                         != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                     requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 200);
                     return;
                 }
 
-                // 토글 제어: 녹음 중이 아니면 시작, 녹음 중이면 중지
                 if (!isRecording) {
                     startRecording();
                 } else {
@@ -95,11 +91,8 @@ public class InputFragment extends Fragment {
         }
 
         try {
-            // GenerativeModel 초기화
             GenerativeModel ai = FirebaseAI.getInstance(GenerativeBackend.googleAI())
-                    .generativeModel("gemini-3.1-flash-lite"); // 사용할 모델명
-
-            // model 변수 초기화
+                    .generativeModel("gemini-3.1-flash-lite");
             model = GenerativeModelFutures.from(ai);
         } catch (Exception e) {
             android.util.Log.e("GeminiError", "모델 초기화 중 에러 발생: " + e.getMessage());
@@ -107,20 +100,6 @@ public class InputFragment extends Fragment {
 
         if (getArguments() != null) {
             selectedEmotion = getArguments().getString("selected_emotion", "");
-        }
-
-        SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
-        TextView tvScoreValue = view.findViewById(R.id.tvScoreValue);
-        EditText etDiary = view.findViewById(R.id.etDiary);
-        CheckBox cbBreakfast = view.findViewById(R.id.cbBreakfast);
-        CheckBox cbLunch = view.findViewById(R.id.cbLunch);
-        CheckBox cbDinner = view.findViewById(R.id.cbDinner);
-        CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
-
-        TextView inputDateText = view.findViewById(R.id.inputDateText);
-        if (inputDateText != null) {
-            String todayStr = new SimpleDateFormat("yyyy년 MM월 dd일 EEEE", Locale.KOREAN).format(new Date());
-            inputDateText.setText(todayStr);
         }
 
         rgInfluence = view.findViewById(R.id.rgInfluence);
@@ -131,7 +110,6 @@ public class InputFragment extends Fragment {
         rgFeedback = view.findViewById(R.id.rgFeedback);
 
         View btnComplete = view.findViewById(R.id.btnComplete);
-
         tvAiQuestion = view.findViewById(R.id.tvAiQuestion);
         etAiAnswer = view.findViewById(R.id.etAiAnswer);
         tvVoiceStatus = view.findViewById(R.id.tvVoiceStatus);
@@ -146,87 +124,26 @@ public class InputFragment extends Fragment {
         setupToggleableRadioGroup(rgNeed);
         setupToggleableRadioGroup(rgFeedback);
 
-        clearAllGroups();
-        etDiary.setText("");
-        etAiAnswer.setText("");
-        if (tvVoiceStatus != null) {
-            tvVoiceStatus.setText("마이크 버튼을 눌러 이야기를 들려주세요");
-            tvVoiceStatus.setTextColor(android.graphics.Color.parseColor("#888888"));
-        }
-        cbBreakfast.setChecked(false);
-        cbLunch.setChecked(false);
-        cbDinner.setChecked(false);
-        cbLateNight.setChecked(false);
-        seekBar.setProgress(80);
-        tvScoreValue.setText("80점");
-
-        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
-        String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
-
-        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords_" + userSuffix, Context.MODE_PRIVATE);
-        String allRecords = pref.getString("all_records", "");
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-        String latestDiaryText = "";
-        String latestDiaryDate = "";
-
-        if (!allRecords.isEmpty()) {
-            String[] recordsArray = allRecords.split("##");
-            for (String r : recordsArray) {
-                if (r.isEmpty()) continue;
-
-                if (!r.startsWith(today)) {
-                    String[] detail = r.split("\\|");
-                    if (detail.length >= 4) {
-                        latestDiaryText = "최근 일기 내용: " + detail[3];
-                        if (detail.length >= 13) {
-                            latestDiaryText += "\n이전 AI 질문: " + detail[11] + "\n그 질문에 대한 답변: " + detail[12];
-                        }
-
-                        latestDiaryDate = r.split(" ")[0];
-                    }
-                    break;
-                }
-            }
-        }
-
-        // 🔮 추출한 가장 최근 일기 날짜 정보를 들고 후속 질문 판단 함수로 이동
-        loadCustomQuestion(latestDiaryText, latestDiaryDate);
-
-
-        if (currentUser != null) {
-            // 로그인 사용자는 Firestore에 저장된 오늘 기록을 기준으로 입력 화면을 복원
-            loadTodayRecordFromFirestore(
-                    view,
-                    currentUser.getUid(),
-                    today,
-                    seekBar,
-                    tvScoreValue,
-                    etDiary,
-                    cbBreakfast,
-                    cbLunch,
-                    cbDinner,
-                    cbLateNight
-            );
-        } else {
-            // 게스트 사용자는 기존 로컬 SharedPreferences 기준으로 입력 화면을 복원
-            restoreTodayRecordFromLocal(
-                    view,
-                    allRecords,
-                    today,
-                    seekBar,
-                    tvScoreValue,
-                    etDiary,
-                    cbBreakfast,
-                    cbLunch,
-                    cbDinner,
-                    cbLateNight
-            );
-        }
+        // 🌟 [구조 변경] onCreateView 내부의 복잡한 로딩/초기화 코드를 실시간 추적이 가능한 리프레시 전담 함수로 통합 이관했습니다.
+        refreshTodayData(view);
 
         if (btnComplete != null) {
             btnComplete.setOnClickListener(v -> {
+                // 클릭 시점에 유저 세션을 다시 체크해 독립 샌드박스 장부를 안전하게 재생성
+                FirebaseUser freshUser = FirebaseAuth.getInstance().getCurrentUser();
+                String freshSuffix = (freshUser != null) ? freshUser.getUid() : "guest";
+                SharedPreferences freshPref = requireActivity().getSharedPreferences("DailyRecords_" + freshSuffix, Context.MODE_PRIVATE);
+
+                String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
                 String fullTime = new SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(new Date());
+
+                SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
+                EditText etDiary = view.findViewById(R.id.etDiary);
+                CheckBox cbBreakfast = view.findViewById(R.id.cbBreakfast);
+                CheckBox cbLunch = view.findViewById(R.id.cbLunch);
+                CheckBox cbDinner = view.findViewById(R.id.cbDinner);
+                CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
+
                 String mealInfo = (cbBreakfast.isChecked() ? "아침 " : "")
                         + (cbLunch.isChecked() ? "점심 " : "")
                         + (cbDinner.isChecked() ? "저녁 " : "")
@@ -267,12 +184,8 @@ public class InputFragment extends Fragment {
                     return;
                 }
 
-                UsageStatsHelper.PhoneUsageSummary phoneSummary =
-                        UsageStatsHelper.getTodayUsageSummary(requireContext());
-
+                UsageStatsHelper.PhoneUsageSummary phoneSummary = UsageStatsHelper.getTodayUsageSummary(requireContext());
                 String phoneUsagePrompt = phoneSummary.toPromptText();
-
-                Log.d("PhoneUsagePrompt", phoneUsagePrompt);
 
                 String customPrompt = String.format(
                         "%s\n\n" +
@@ -302,40 +215,19 @@ public class InputFragment extends Fragment {
                                 "사용자가 피곤하거나 바빠서 자주 확인했을 가능성도 함께 고려해줘. " +
                                 "말투는 '귀하' 같은 딱딱한 표현을 쓰지 말고, 사용자를 '당신' 또는 자연스러운 말투로 불러줘. " +
                                 "너무 진단 보고서처럼 쓰지 말고, 따뜻하지만 과하게 단정하지 않는 말투로 작성해줘. ",
-                        aiRoll,
-                        emotionLabel,
-                        seekBar.getProgress(),
+                        aiRoll, emotionLabel, seekBar.getProgress(),
                         mealInfo.trim().isEmpty() ? "모두 거름" : mealInfo.trim(),
-                        influenceValue,
-                        stressValue,
-                        fatigueValue,
-                        sleepValue,
-                        needValue,
-                        feedbackValue,
-                        aiQuestionValue,
-                        aiAnswerValue.trim().isEmpty() ? "답변 없음" : aiAnswerValue,
-                        diaryValue,
-                        phoneUsagePrompt
+                        influenceValue, stressValue, fatigueValue, sleepValue, needValue, feedbackValue,
+                        aiQuestionValue, aiAnswerValue.trim().isEmpty() ? "답변 없음" : aiAnswerValue, diaryValue, phoneUsagePrompt
                 );
 
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
-                        fullTime,
-                        selectedEmotion,
-                        seekBar.getProgress(),
-                        diaryValue,
-                        mealInfo,
-                        influenceValue,
-                        stressValue,
-                        fatigueValue,
-                        sleepValue,
-                        needValue,
-                        feedbackValue,
-                        aiQuestionValue, // 👈 [추가] 11번 인덱스에 질문 저장
-                        aiAnswerValue);
+                        fullTime, selectedEmotion, seekBar.getProgress(), diaryValue, mealInfo,
+                        influenceValue, stressValue, fatigueValue, sleepValue, needValue, feedbackValue,
+                        aiQuestionValue, aiAnswerValue);
 
-
-                SharedPreferences.Editor editor = pref.edit();
-                String oldRecords = pref.getString("all_records", "");
+                SharedPreferences.Editor editor = freshPref.edit();
+                String oldRecords = freshPref.getString("all_records", "");
                 StringBuilder updatedList = new StringBuilder();
 
                 for (String r : oldRecords.split("##")) {
@@ -348,12 +240,9 @@ public class InputFragment extends Fragment {
                 editor.apply();
 
                 saveRecord(fullTime, mealInfo, seekBar.getProgress(), diaryValue, "AI 분석 중...");
-
-                // 일기를 새로 완벽히 작성하고 넘어가므로, 다음 날을 위해 임시 질문 캐시 장부를 리셋합니다.
                 cachedAiQuestion = "";
                 cachedQuestionTargetDate = "";
 
-                // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
                 askGemini(customPrompt, recordedAudioBytes, audioMimeType, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
             });
         }
@@ -361,67 +250,144 @@ public class InputFragment extends Fragment {
         return view;
     }
 
+    // 🌟 [독립 신설 및 통합 완료] onCreateView 내부에 있던 데이터 바인딩 및 자정 판단 파이프라인
+    private void refreshTodayData(View view) {
+        if (view == null || !isAdded()) return;
+
+        SeekBar seekBar = view.findViewById(R.id.scoreSeekBar);
+        TextView tvScoreValue = view.findViewById(R.id.tvScoreValue);
+        EditText etDiary = view.findViewById(R.id.etDiary);
+        CheckBox cbBreakfast = view.findViewById(R.id.cbBreakfast);
+        CheckBox cbLunch = view.findViewById(R.id.cbLunch);
+        CheckBox cbDinner = view.findViewById(R.id.cbDinner);
+        CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
+        TextView inputDateText = view.findViewById(R.id.inputDateText);
+
+        clearAllGroups();
+        etDiary.setText("");
+        etAiAnswer.setText("");
+        if (tvVoiceStatus != null) {
+            tvVoiceStatus.setText("마이크 버튼을 눌러 이야기를 들려주세요");
+            tvVoiceStatus.setTextColor(android.graphics.Color.parseColor("#888888"));
+        }
+        cbBreakfast.setChecked(false);
+        cbLunch.setChecked(false);
+        cbDinner.setChecked(false);
+        cbLateNight.setChecked(false);
+        seekBar.setProgress(80);
+        tvScoreValue.setText("80점");
+
+        if (inputDateText != null) {
+            String todayStr = new SimpleDateFormat("yyyy년 MM월 dd일 EEEE", Locale.KOREAN).format(new Date());
+            inputDateText.setText(todayStr);
+        }
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
+
+        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords_" + userSuffix, Context.MODE_PRIVATE);
+
+        // 🌟 [핵심 기획 이식: 게스트 24시 데이터 자동 파기 처리]
+        if (currentUser == null) {
+            // 1. 단일 데이터 보관용 GuestRecordStore 자정 만료 가동
+            GuestRecordStore.clearIfNotToday(requireContext());
+
+            String currentAllRecords = pref.getString("all_records", "");
+            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+            if (!currentAllRecords.isEmpty()) {
+                boolean isTodayRecordExist = false;
+                for (String r : currentAllRecords.split("##")) {
+                    if (r.startsWith(todayDate)) {
+                        isTodayRecordExist = true;
+                        break;
+                    }
+                }
+                // 2. 만약 장부에 어제 이전의 기록만 있고 '오늘 생성된 기록'이 단 한 줄도 없다면 즉시 초기화!
+                if (!isTodayRecordExist) {
+                    pref.edit().putString("all_records", "").apply();
+                    Log.d("GuestMode", "24시 자정이 지나 게스트 데이터가 안전하게 자동 파기 및 초기화되었습니다. 🧼");
+                }
+            }
+        }
+
+        String allRecords = pref.getString("all_records", "");
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+
+        String latestDiaryText = "";
+        String latestDiaryDate = "";
+
+        if (!allRecords.isEmpty()) {
+            String[] recordsArray = allRecords.split("##");
+            for (String r : recordsArray) {
+                if (r.isEmpty()) continue;
+                if (!r.startsWith(today)) {
+                    String[] detail = r.split("\\|");
+                    if (detail.length >= 4) {
+                        latestDiaryText = "최근 일기 내용: " + detail[3];
+                        if (detail.length >= 13) {
+                            latestDiaryText += "\n이전 AI 질문: " + detail[11] + "\n그 질문에 대한 답변: " + detail[12];
+                        }
+                        latestDiaryDate = r.split(" ")[0];
+                    }
+                    break;
+                }
+            }
+        }
+
+        loadCustomQuestion(latestDiaryText, latestDiaryDate);
+
+        if (currentUser != null) {
+            loadTodayRecordFromFirestore(view, currentUser.getUid(), today, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
+        } else {
+            restoreTodayRecordFromLocal(view, allRecords, today, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
+        }
+    }
+
+    // 🌟 [생명주기 동기화 감시망 추가] 유저가 탭을 바꾸거나 홈 화면을 갔다 와서 화면을 다시 마주할 때 리프레시 실시간 가동
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden && getView() != null) {
+            refreshTodayData(getView());
+        }
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getView() != null) {
+            refreshTodayData(getView());
+        }
+    }
 
     private void loadTodayRecordFromFirestore(
-            View view,
-            String uid,
-            String today,
-            SeekBar seekBar,
-            TextView tvScoreValue,
-            EditText etDiary,
-            CheckBox cbBreakfast,
-            CheckBox cbLunch,
-            CheckBox cbDinner,
-            CheckBox cbLateNight
+            View view, String uid, String today, SeekBar seekBar, TextView tvScoreValue,
+            EditText etDiary, CheckBox cbBreakfast, CheckBox cbLunch, CheckBox cbDinner, CheckBox cbLateNight
     ) {
         if (db == null || uid == null || today == null) {
             updateEmotionHighlight(view);
             return;
         }
 
-        db.collection("users")
-                .document(uid)
-                .collection("daily_records")
-                .document(today)
-                .get()
+        db.collection("users").document(uid).collection("daily_records").document(today).get()
                 .addOnSuccessListener(documentSnapshot -> {
                     if (!isAdded()) return;
-
                     if (documentSnapshot == null || !documentSnapshot.exists()) {
                         updateEmotionHighlight(view);
                         return;
                     }
-
-                    restoreInputFromFirestoreDocument(
-                            view,
-                            documentSnapshot,
-                            seekBar,
-                            tvScoreValue,
-                            etDiary,
-                            cbBreakfast,
-                            cbLunch,
-                            cbDinner,
-                            cbLateNight
-                    );
+                    restoreInputFromFirestoreDocument(view, documentSnapshot, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
                 })
                 .addOnFailureListener(e -> {
                     Log.w("Firestore", "오늘 기록 불러오기 실패", e);
-                    if (isAdded()) {
-                        updateEmotionHighlight(view);
-                    }
+                    if (isAdded()) updateEmotionHighlight(view);
                 });
     }
 
     private void restoreInputFromFirestoreDocument(
-            View view,
-            DocumentSnapshot document,
-            SeekBar seekBar,
-            TextView tvScoreValue,
-            EditText etDiary,
-            CheckBox cbBreakfast,
-            CheckBox cbLunch,
-            CheckBox cbDinner,
-            CheckBox cbLateNight
+            View view, DocumentSnapshot document, SeekBar seekBar, TextView tvScoreValue,
+            EditText etDiary, CheckBox cbBreakfast, CheckBox cbLunch, CheckBox cbDinner, CheckBox cbLateNight
     ) {
         String emotion = document.getString("emotion");
         if (emotion != null && !emotion.trim().isEmpty()) {
@@ -460,21 +426,11 @@ public class InputFragment extends Fragment {
         if (etAiAnswer != null && aiAnswer != null && !aiAnswer.trim().isEmpty()) {
             etAiAnswer.setText(aiAnswer);
         }
-
-        Log.d("InputFragment", "Firestore 오늘 기록을 입력 화면에 복원했습니다.");
     }
 
     private void restoreTodayRecordFromLocal(
-            View view,
-            String allRecords,
-            String today,
-            SeekBar seekBar,
-            TextView tvScoreValue,
-            EditText etDiary,
-            CheckBox cbBreakfast,
-            CheckBox cbLunch,
-            CheckBox cbDinner,
-            CheckBox cbLateNight
+            View view, String allRecords, String today, SeekBar seekBar, TextView tvScoreValue,
+            EditText etDiary, CheckBox cbBreakfast, CheckBox cbLunch, CheckBox cbDinner, CheckBox cbLateNight
     ) {
         if (allRecords == null || !allRecords.contains(today)) {
             updateEmotionHighlight(view);
@@ -497,9 +453,7 @@ public class InputFragment extends Fragment {
                         seekBar.setProgress(80);
                         tvScoreValue.setText("80점");
                     }
-
                     etDiary.setText(detail[3]);
-
                     cbBreakfast.setChecked(detail[4].contains("아침"));
                     cbLunch.setChecked(detail[4].contains("점심"));
                     cbDinner.setChecked(detail[4].contains("저녁"));
@@ -513,14 +467,8 @@ public class InputFragment extends Fragment {
                 if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
                 if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
 
-                if (detail.length > 11 && tvAiQuestion != null) {
-                    tvAiQuestion.setText(detail[11]);
-                }
-
-                if (detail.length > 12 && etAiAnswer != null) {
-                    etAiAnswer.setText(detail[12]);
-                }
-
+                if (detail.length > 11 && tvAiQuestion != null) tvAiQuestion.setText(detail[11]);
+                if (detail.length > 12 && etAiAnswer != null) etAiAnswer.setText(detail[12]);
                 break;
             }
         }
@@ -528,12 +476,7 @@ public class InputFragment extends Fragment {
 
     private void saveRecord(String fullTime, String mealInfo, int score, String diary, String resultText) {
         Context context = getContext();
-
-        // Gemini 응답이 늦게 돌아온 뒤 Fragment가 이미 화면에서 떨어져 있으면 requireContext()로 튕길 수 있음
-        if (context == null) {
-            Log.w("InputFragment", "Fragment context is null. Skip saving record.");
-            return;
-        }
+        if (context == null) return;
 
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
@@ -553,9 +496,7 @@ public class InputFragment extends Fragment {
         record.put("need", getSelectedText(rgNeed));
         record.put("feedback", getSelectedText(rgFeedback));
 
-        UsageStatsHelper.PhoneUsageSummary phoneSummary =
-                UsageStatsHelper.getTodayUsageSummary(context);
-
+        UsageStatsHelper.PhoneUsageSummary phoneSummary = UsageStatsHelper.getTodayUsageSummary(context);
         record.put("phoneTotalMinutes", phoneSummary.totalUsageMinutes);
         record.put("phoneOpenCount", phoneSummary.totalOpenCount);
         record.put("phoneShortSessionCount", phoneSummary.shortSessionCount);
@@ -568,40 +509,24 @@ public class InputFragment extends Fragment {
         record.put("resultText", resultText);
 
         String dateId = fullTime.split(" ")[0];
-
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+
         if (currentUser != null) {
             String uid = currentUser.getUid();
-            db.collection("users")
-                    .document(uid)
-                    .collection("daily_records")
-                    .document(dateId)
-                    .set(record)
-                    .addOnSuccessListener(aVoid -> {
-                        Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
-                    })
-                    .addOnFailureListener(e -> {
-                        Log.w("Firestore", "기록 저장 실패", e);
-                    });
+            db.collection("users").document(uid).collection("daily_records").document(dateId).set(record);
         } else {
             GuestRecordStore.saveTodayRecord(context, record, dateId);
-            Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
         }
     }
 
     private void loadCustomQuestion(String latestDiary, final String latestDiaryDate) {
         if (latestDiary == null || latestDiary.trim().isEmpty() || model == null) {
-            if (tvAiQuestion != null) {
-                tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
-            }
+            if (tvAiQuestion != null) tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
             return;
         }
 
-        // 🌟 [캐시 핵심 필터] 낚아챈 최근 일기의 날짜가 이미 캐싱해둔 타겟 날짜와 같고 장부가 비어있지 않다면?
         if (latestDiaryDate.equals(cachedQuestionTargetDate) && !cachedAiQuestion.isEmpty()) {
-            if (tvAiQuestion != null) {
-                tvAiQuestion.setText(cachedAiQuestion); // 제미나이 안 부르고 0초 만에 복원!
-            }
+            if (tvAiQuestion != null) tvAiQuestion.setText(cachedAiQuestion);
             return;
         }
 
@@ -632,15 +557,11 @@ public class InputFragment extends Fragment {
             public void onSuccess(GenerateContentResponse result) {
                 if (isAdded() && tvAiQuestion != null) {
                     String questionText = result.getText().trim();
-
-                    // 🌟 [캐시 기록] 생성된 따끈따끈한 질문과 분석한 과거 일기 날짜를 장부에 도장 찍기
                     cachedAiQuestion = questionText;
                     cachedQuestionTargetDate = latestDiaryDate;
-
                     tvAiQuestion.setText(questionText);
                 }
             }
-
             @Override
             public void onFailure(Throwable t) {
                 if (isAdded() && tvAiQuestion != null) {
@@ -658,13 +579,10 @@ public class InputFragment extends Fragment {
     private void applyToggleLogicRecursively(View view, ViewGroup rootGroup) {
         if (view instanceof RadioButton) {
             RadioButton radioButton = (RadioButton) view;
-
             radioButton.setTag(false);
             radioButton.setOnClickListener(v -> {
                 boolean wasChecked = radioButton.getTag() != null && (boolean) radioButton.getTag();
-
                 uncheckAllInGroup(rootGroup);
-
                 if (!wasChecked) {
                     radioButton.setChecked(true);
                     radioButton.setTag(true);
@@ -689,10 +607,8 @@ public class InputFragment extends Fragment {
 
     private void uncheckAllInGroup(ViewGroup group) {
         if (group == null) return;
-
         for (int i = 0; i < group.getChildCount(); i++) {
             View child = group.getChildAt(i);
-
             if (child instanceof RadioButton) {
                 ((RadioButton) child).setChecked(false);
                 child.setTag(false);
@@ -708,10 +624,8 @@ public class InputFragment extends Fragment {
 
     private String findCheckedText(ViewGroup group) {
         if (group == null) return "미선택";
-
         for (int i = 0; i < group.getChildCount(); i++) {
             View child = group.getChildAt(i);
-
             if (child instanceof RadioButton && ((RadioButton) child).isChecked()) {
                 return ((RadioButton) child).getText().toString();
             } else if (child instanceof ViewGroup) {
@@ -719,7 +633,6 @@ public class InputFragment extends Fragment {
                 if (!text.equals("미선택")) return text;
             }
         }
-
         return "미선택";
     }
 
@@ -731,7 +644,6 @@ public class InputFragment extends Fragment {
     private void applyCheckedStateByText(ViewGroup group, String text) {
         for (int i = 0; i < group.getChildCount(); i++) {
             View child = group.getChildAt(i);
-
             if (child instanceof RadioButton) {
                 RadioButton radioButton = (RadioButton) child;
                 if (radioButton.getText().toString().trim().equals(text)) {
@@ -751,7 +663,6 @@ public class InputFragment extends Fragment {
         for (int i = 0; i < resIds.length; i++) {
             final String code = codes[i];
             ImageButton button = view.findViewById(resIds[i]);
-
             if (button != null) {
                 button.setOnClickListener(v -> {
                     selectedEmotion = code;
@@ -767,7 +678,6 @@ public class InputFragment extends Fragment {
 
         for (int i = 0; i < resIds.length; i++) {
             ImageButton button = view.findViewById(resIds[i]);
-
             if (button != null) {
                 button.setBackgroundResource(selectedEmotion.equals(codes[i]) ? R.drawable.circle_bg : 0);
             }
@@ -785,11 +695,8 @@ public class InputFragment extends Fragment {
                     int roundedScore = Math.round(progress / 10.0f) * 10;
                     tvScoreValue.setText(roundedScore + "점");
                 }
-
                 @Override
-                public void onStartTrackingTouch(SeekBar seekBar) {
-                }
-
+                public void onStartTrackingTouch(SeekBar seekBar) {}
                 @Override
                 public void onStopTrackingTouch(SeekBar seekBar) {
                     int roundedScore = Math.round(seekBar.getProgress() / 10.0f) * 10;
@@ -804,7 +711,6 @@ public class InputFragment extends Fragment {
         if (model == null) return;
 
         Content.Builder contentBuilder = new Content.Builder();
-
         if (diary.trim().isEmpty()) {
             String audioInstructions = "\n\n★[음성 녹음 처리 필수 규칙]★\n" +
                     "너는 함께 첨부된 [음성 데이터]를 귀로 듣고 사용자가 말한 받아쓰기(STT) 내용을 파악해야 해.\n" +
@@ -833,7 +739,6 @@ public class InputFragment extends Fragment {
             @Override
             public void onSuccess(GenerateContentResponse result) {
                 String resultText = (result != null) ? result.getText() : null;
-
                 String finalDiary = diary;
                 String cleanAiResponse = resultText;
 
@@ -841,35 +746,25 @@ public class InputFragment extends Fragment {
                     try {
                         String[] parts = resultText.split("===STT_END===");
                         if (parts.length >= 2) {
-                            finalDiary = parts[0].trim();       //STT
-                            cleanAiResponse = parts[1].trim();  //AiResponse
+                            finalDiary = parts[0].trim();
+                            cleanAiResponse = parts[1].trim();
                         }
                     } catch (Exception e) {
                         Log.e("GeminiParse", "STT 문장 쪼개기 실패", e);
                     }
                 }
 
-                if (finalDiary.trim().isEmpty()) {
-                    finalDiary = "음성 녹음 과정에서 문제가 발생했어요...😥";
-                }
+                if (finalDiary.trim().isEmpty()) finalDiary = "음성 녹음 과정에서 문제가 발생했어요...😥";
+                if (cleanAiResponse == null || cleanAiResponse.trim().isEmpty()) cleanAiResponse = "AI 피드백을 생성하지 못했어요.";
 
-                if (cleanAiResponse == null || cleanAiResponse.trim().isEmpty()) {
-                    cleanAiResponse = "AI 피드백을 생성하지 못했어요.";
-                }
-
-                // AI 답변을 포함하여 최종 저장
                 saveRecord(fullTime, mealInfo, score, finalDiary, cleanAiResponse);
-
                 clearTemporaryAudioData();
 
                 if (isAdded() && getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra);
-                    }
+                    if (bottomNav != null) bottomNav.setSelectedItemId(R.id.extra);
                 }
             }
-
             @Override
             public void onFailure(Throwable t) {
                 Log.e("Gemini", "에러 발생: " + t.getMessage());
@@ -880,47 +775,40 @@ public class InputFragment extends Fragment {
     private String normalizeEmotionValue(String emotionValue) {
         if (emotionValue == null) return "";
         String value = emotionValue.trim();
-
         if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
         if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
         if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
         if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
         if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
-
         return value;
     }
 
     private String getEmotionLabel(String emotionValue) {
         String value = normalizeEmotionValue(emotionValue);
-
         if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
         if ("안좋아요".equals(value)) return "안 좋아요";
         if ("보통이에요".equals(value)) return "보통이에요";
         if ("좋아요".equals(value)) return "좋아요";
         if ("매우_좋아요".equals(value)) return "매우 좋아요";
-
         return "감정 미선택";
     }
 
     private int getEmotionScore(String emotionValue) {
         String value = normalizeEmotionValue(emotionValue);
-
         if ("raw_emo1".equals(value) || "매우_안좋아요".equals(value)) return 1;
         if ("raw_emo2".equals(value) || "안좋아요".equals(value)) return 2;
         if ("raw_emo3".equals(value) || "보통이에요".equals(value)) return 3;
         if ("raw_emo4".equals(value) || "좋아요".equals(value)) return 4;
         if ("raw_emo5".equals(value) || "매우_좋아요".equals(value)) return 5;
-
         return 3;
     }
 
     private void clearTemporaryAudioData() {
         try {
             if (audioFile != null && audioFile.exists()) {
-                boolean deleted = audioFile.delete();
-                Log.d("AudioClean", "임시 오디오 파일 삭제 완료: " + deleted);
+                audioFile.delete();
             }
-            recordedAudioBytes = null; // 대용량 바이트 배열 가비지 컬렉터(GC)로 반환
+            recordedAudioBytes = null;
             audioFile = null;
         } catch (Exception e) {
             Log.e("AudioClean", "임시 데이터 정리 중 에러", e);
@@ -929,12 +817,10 @@ public class InputFragment extends Fragment {
 
     private void startRecording() {
         try {
-            // 새로 녹음 버튼을 누르면 이전 녹음 파일과 바이트 배열을 메모리에서 해제하여 초기화!
             if (audioFile != null && audioFile.exists()) {
                 audioFile.delete();
             }
             recordedAudioBytes = null;
-
             audioFile = java.io.File.createTempFile("off_record_audio", ".wav", requireContext().getCacheDir());
 
             recorder = new android.media.MediaRecorder();
@@ -952,7 +838,6 @@ public class InputFragment extends Fragment {
                 tvVoiceStatus.setText("녹음 중입니다... 다시 누르면 중지됩니다.");
                 tvVoiceStatus.setTextColor(android.graphics.Color.RED);
             }
-
         } catch (java.io.IOException e) {
             Log.e("AudioRecord", "녹음 시작 실패", e);
         }
@@ -963,30 +848,15 @@ public class InputFragment extends Fragment {
             try {
                 recorder.stop();
                 recorder.release();
-
-                if (audioFile != null && audioFile.exists()) {
-                    long fileSize = audioFile.length();
-                    android.util.Log.d("AudioRecord", "녹음 완료. 파일 경로: " + audioFile.getAbsolutePath());
-                    android.util.Log.d("AudioRecord", "최종 파일 크기: " + fileSize + " bytes");
-
-                    if (fileSize > 1000) { // 대략 1KB 이상이면 데이터가 담긴 것
-                        android.util.Log.d("AudioRecord", "소리데이터가 저장되었습니다.");
-                    } else {
-                        android.util.Log.w("AudioRecord", "파일 크기가 너무 작습니다. 녹음이 안 되었을 수 있습니다.");
-                    }
-                }
-
                 recorder = null;
                 isRecording = false;
 
-                // 버튼 색상 원상복구 (초록색)
                 btnVoiceInput.setColorFilter(android.graphics.Color.parseColor("#4CAF50"));
                 if (tvVoiceStatus != null) {
                     tvVoiceStatus.setText("음성 녹음 완료! (기록 완료 시 함께 분석됩니다)");
                     tvVoiceStatus.setTextColor(android.graphics.Color.parseColor("#4CAF50"));
                 }
 
-                // 3. 임시 저장된 오디오 파일을 바이트 배열(byte[])로 변환하여 보관
                 if (audioFile != null && audioFile.exists()) {
                     java.io.FileInputStream fis = new java.io.FileInputStream(audioFile);
                     java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
@@ -996,10 +866,7 @@ public class InputFragment extends Fragment {
                         baos.write(buffer, 0, read);
                     }
                     fis.close();
-
-                    // 전역변수에 바이트 배열 백업! (이제 btnComplete 누를 때 배달됩니다)
                     recordedAudioBytes = baos.toByteArray();
-
                 }
             } catch (Exception e) {
                 Log.e("AudioRecord", "녹음 중지 및 파일 변환 실패", e);
@@ -1010,7 +877,6 @@ public class InputFragment extends Fragment {
     @Override
     public void onStop() {
         super.onStop();
-        // 화면이 꺼지거나 나갈 때 녹음기가 돌고 있다면 안전하게 해제
         if (recorder != null) {
             recorder.release();
             recorder = null;
