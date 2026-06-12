@@ -24,6 +24,8 @@ public class GuestRecordStore {
         editor.putString("date", dateId);
         editor.putString("timestamp", stringValue(record.get("timestamp")));
         editor.putString("emotion", stringValue(record.get("emotion")));
+        editor.putString("emotionLabel", stringValue(record.get("emotionLabel")));
+        editor.putInt("emotionScore", intValue(record.get("emotionScore")));
         editor.putInt("score", intValue(record.get("score")));
         editor.putString("diary", stringValue(record.get("diary")));
         editor.putString("meals", stringValue(record.get("meals")));
@@ -33,6 +35,17 @@ public class GuestRecordStore {
         editor.putString("sleep", stringValue(record.get("sleep")));
         editor.putString("need", stringValue(record.get("need")));
         editor.putString("feedback", stringValue(record.get("feedback")));
+        editor.putString("aiQuestion", stringValue(record.get("aiQuestion")));
+        editor.putString("aiAnswer", stringValue(record.get("aiAnswer")));
+        editor.putString("resultText", stringValue(record.get("resultText")));
+
+        editor.putInt("phoneTotalMinutes", intValue(record.get("phoneTotalMinutes")));
+        editor.putInt("phoneOpenCount", intValue(record.get("phoneOpenCount")));
+        editor.putInt("phoneShortSessionCount", intValue(record.get("phoneShortSessionCount")));
+        editor.putInt("phoneNightUsageMinutes", intValue(record.get("phoneNightUsageMinutes")));
+        editor.putInt("digitalSignalScore", intValue(record.get("digitalSignalScore")));
+        editor.putString("digitalPattern", stringValue(record.get("digitalPattern")));
+
         editor.apply();
     }
 
@@ -50,6 +63,8 @@ public class GuestRecordStore {
         record.put("date", pref.getString("date", ""));
         record.put("timestamp", pref.getString("timestamp", ""));
         record.put("emotion", pref.getString("emotion", ""));
+        record.put("emotionLabel", pref.getString("emotionLabel", ""));
+        record.put("emotionScore", pref.getInt("emotionScore", 0));
         record.put("score", pref.getInt("score", 0));
         record.put("diary", pref.getString("diary", ""));
         record.put("meals", pref.getString("meals", ""));
@@ -60,6 +75,17 @@ public class GuestRecordStore {
         record.put("need", pref.getString("need", "미선택"));
         record.put("feedback", pref.getString("feedback", "미선택"));
         record.put("resultText", pref.getString("resultText", ""));
+        record.put("aiQuestion", pref.getString("aiQuestion", ""));
+        record.put("aiAnswer", pref.getString("aiAnswer", ""));
+        record.put("resultText", pref.getString("resultText", ""));
+
+        record.put("phoneTotalMinutes", pref.getInt("phoneTotalMinutes", 0));
+        record.put("phoneOpenCount", pref.getInt("phoneOpenCount", 0));
+        record.put("phoneShortSessionCount", pref.getInt("phoneShortSessionCount", 0));
+        record.put("phoneNightUsageMinutes", pref.getInt("phoneNightUsageMinutes", 0));
+        record.put("digitalSignalScore", pref.getInt("digitalSignalScore", 0));
+        record.put("digitalPattern", pref.getString("digitalPattern", ""));
+
         return record;
     }
 

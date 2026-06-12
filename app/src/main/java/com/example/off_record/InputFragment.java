@@ -33,7 +33,9 @@ import com.google.firebase.ai.type.Part;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.DocumentSnapshot;
 
+import java.util.Calendar;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -48,6 +50,17 @@ public class InputFragment extends Fragment {
     private FirebaseFirestore db;
     private GenerativeModelFutures model;
     private TextView tvResultView;
+    private TextView tvAiQuestion;
+    private EditText etAiAnswer;
+
+    // 🌟 [추가] 탭을 다시 누를 때 AI 질문이 새로 고쳐지는 것을 막기 위한 정적 캐시 장부
+    private static String cachedAiQuestion = "";
+    private static String cachedQuestionTargetDate = "";
+
+    public static void resetCache() {
+        cachedAiQuestion = "";
+        cachedQuestionTargetDate = "";
+    }
 
     private ImageButton btnVoiceInput;
     private boolean isRecording = false;       // 현재 녹음 중인지 상태 체크
@@ -123,6 +136,9 @@ public class InputFragment extends Fragment {
 
         tvResultView = view.findViewById(R.id.tvResultView);
 
+        tvAiQuestion = view.findViewById(R.id.tvAiQuestion);
+        etAiAnswer = view.findViewById(R.id.etAiAnswer);
+
         setupEmotionSelection(view);
         setupScoreInput(view);
 
@@ -134,43 +150,77 @@ public class InputFragment extends Fragment {
         setupToggleableRadioGroup(rgFeedback);
 
         clearAllGroups();
+        etDiary.setText("");
+        etAiAnswer.setText("");
+        cbBreakfast.setChecked(false);
+        cbLunch.setChecked(false);
+        cbDinner.setChecked(false);
+        cbLateNight.setChecked(false);
+        seekBar.setProgress(80);
+        tvScoreValue.setText("80점");
 
-        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords", Context.MODE_PRIVATE);
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
+
+        SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords_" + userSuffix, Context.MODE_PRIVATE);
         String allRecords = pref.getString("all_records", "");
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
-        if (allRecords.contains(today)) {
+        String latestDiaryText = "";
+        String latestDiaryDate = "";
+
+        if (!allRecords.isEmpty()) {
             String[] recordsArray = allRecords.split("##");
-            for (String record : recordsArray) {
-                if (record.startsWith(today)) {
-                    String[] detail = record.split("\\|");
+            for (String r : recordsArray) {
+                if (r.isEmpty()) continue;
 
-                    if (detail.length >= 5) {
-                        if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
-                        updateEmotionHighlight(view);
+                if (!r.startsWith(today)) {
+                    String[] detail = r.split("\\|");
+                    if (detail.length >= 4) {
+                        latestDiaryText = "최근 일기 내용: " + detail[3];
+                        if (detail.length >= 13) {
+                            latestDiaryText += "\n이전 AI 질문: " + detail[11] + "\n그 질문에 대한 답변: " + detail[12];
+                        }
 
-                        seekBar.setProgress(Integer.parseInt(detail[2]));
-                        tvScoreValue.setText(detail[2] + "점");
-                        etDiary.setText(detail[3]);
-
-                        cbBreakfast.setChecked(detail[4].contains("아침"));
-                        cbLunch.setChecked(detail[4].contains("점심"));
-                        cbDinner.setChecked(detail[4].contains("저녁"));
-                        cbLateNight.setChecked(detail[4].contains("야식"));
+                        latestDiaryDate = r.split(" ")[0];
                     }
-
-                    if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
-                    if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
-                    if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
-                    if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
-                    if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
-
-                    if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
                     break;
                 }
             }
+        }
+
+        // 🔮 추출한 가장 최근 일기 날짜 정보를 들고 후속 질문 판단 함수로 이동
+        loadCustomQuestion(latestDiaryText, latestDiaryDate);
+
+
+        if (currentUser != null) {
+            // 로그인 사용자는 Firestore에 저장된 오늘 기록을 기준으로 입력 화면을 복원
+            loadTodayRecordFromFirestore(
+                    view,
+                    currentUser.getUid(),
+                    today,
+                    seekBar,
+                    tvScoreValue,
+                    etDiary,
+                    cbBreakfast,
+                    cbLunch,
+                    cbDinner,
+                    cbLateNight
+            );
         } else {
-            updateEmotionHighlight(view);
+            // 게스트 사용자는 기존 로컬 SharedPreferences 기준으로 입력 화면을 복원
+            restoreTodayRecordFromLocal(
+                    view,
+                    allRecords,
+                    today,
+                    seekBar,
+                    tvScoreValue,
+                    etDiary,
+                    cbBreakfast,
+                    cbLunch,
+                    cbDinner,
+                    cbLateNight
+            );
         }
 
         if (btnComplete != null) {
@@ -181,7 +231,19 @@ public class InputFragment extends Fragment {
                         + (cbDinner.isChecked() ? "저녁 " : "")
                         + (cbLateNight.isChecked() ? "야식" : "");
 
+                String influenceValue = getSelectedText(rgInfluence);
+                String stressValue = getSelectedText(rgStress);
+                String fatigueValue = getSelectedText(rgFatigue);
+                String sleepValue = getSelectedText(rgSleep);
+                String needValue = getSelectedText(rgNeed);
                 String feedbackValue = getSelectedText(rgFeedback);
+                String diaryValue = etDiary.getText().toString();
+                selectedEmotion = normalizeEmotionValue(selectedEmotion);
+                String emotionLabel = getEmotionLabel(selectedEmotion);
+
+                String aiQuestionValue = (tvAiQuestion != null) ? tvAiQuestion.getText().toString() : "오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?";
+                String aiAnswerValue = (etAiAnswer != null) ? etAiAnswer.getText().toString() : "답변 없음";
+
                 String aiRoll = "";
                 if(feedbackValue.equals("공감형 피드백")){
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
@@ -192,7 +254,7 @@ public class InputFragment extends Fragment {
                 }else if(feedbackValue.equals("내일 행동 추천")){
                     aiRoll = "너는 삶의 긍정적인 변화를 이끄는 '라이프 코치(Life Coach)'야. 사용자가 내일 바로 실천할 수 있는 가장 효과적이고 구체적인 행동 몇가지를 명확하게 미션으로 추천해줘.";
                 }else if(feedbackValue.equals("짧은 한마디")){
-                    aiRoll = "너는 복잡한 생각을 한 번에 정리해 주는 '통찰력 있는 인생 멘토'야. 군더더기 없이 오늘 하루를 관통하는 짧고 강렬한 응원과 뼈 때리는 문장 한 마디만 남겨줘.";
+                    aiRoll = "너는 복잡한 생각을 한 번에 정리해 주는 '통찰력 있는 인생 멘토'야. 군더더기 없이 오늘 하루를 관통하는 짧고 강렬한 응원 및 뼈 때리는 문장 한 마디만 남겨줘.";
                 }else{
                     aiRoll = "너는 내담자의 상처를 따뜻하게 치유해 주는 '감정 코칭 전문 심리상담사'야. 친구처럼 든든하고 다정하게, 사용자의 마음에 깊이 공감하고 위로해 줘.";
                 }
@@ -205,17 +267,71 @@ public class InputFragment extends Fragment {
                 }
 
                 String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s",
+                UsageStatsHelper.PhoneUsageSummary phoneSummary =
+                        UsageStatsHelper.getTodayUsageSummary(requireContext());
+
+                String phoneUsagePrompt = phoneSummary.toPromptText();
+
+                Log.d("PhoneUsagePrompt", phoneUsagePrompt);
+
+                String customPrompt = String.format(
+                        "%s\n\n" +
+                                "지금 보내주는 정보는 나의 오늘 하루 데이터야. 너는 이 데이터들을 면밀히 분석해서 말해줘. " +
+                                "글은 약 400자 미만이면 좋겠어. 꼭 400자를 꽉 채울 필요는 없고, 필요한 만큼 자연스럽게 작성해줘.\n\n" +
+                                "[오늘의 데이터]\n" +
+                                "- 선택한 감정: %s\n" +
+                                "- 컨디션 점수: %d점\n" +
+                                "- 먹은 식사: %s\n" +
+                                "- 오늘 감정에 가장 큰 영향을 준 것: %s\n" +
+                                "- 스트레스 정도: %s\n" +
+                                "- 피로도: %s\n" +
+                                "- 수면 상태: %s\n" +
+                                "- 지금 나에게 필요한 것: %s\n" +
+                                "- 내가 원하는 피드백 방식: %s\n" +
+                                "🌟 [AI가 유저에게 던졌던 특별 맞춤 질문]: %s\n" +
+                                "🌟 [이 질문에 대해 유저가 적은 다이렉트 답변]: %s\n" +
+                                "- 오늘 나의 이야기: %s\n\n" +
+                                "[오늘의 휴대폰 사용 기반 행동 데이터]\n" +
+                                "%s\n\n" +
+                                "위 데이터를 모두 반영해서 분석해줘. " +
+                                "휴대폰 사용 데이터는 진단 목적이 아니라 생활 패턴 참고용이야. " +
+                                "불안, 스트레스, 회피성 사용 가능성을 단정하지 말고 가능성 중심으로 조심스럽게 분석해줘. " +
+                                "특히 내가 원하는 피드백 방식에 맞춰서 답변해줘."+
+                                "휴대폰 사용 데이터는 참고용 보조 지표일 뿐이며, 심리 상태를 확정하거나 진단하지 마. " +
+                                "앱 실행 횟수나 짧은 반복 사용이 많더라도 반드시 불안이라고 단정하지 말고, " +
+                                "사용자가 피곤하거나 바빠서 자주 확인했을 가능성도 함께 고려해줘. " +
+                                "말투는 '귀하' 같은 딱딱한 표현을 쓰지 말고, 사용자를 '당신' 또는 자연스러운 말투로 불러줘. " +
+                                "너무 진단 보고서처럼 쓰지 말고, 따뜻하지만 과하게 단정하지 않는 말투로 작성해줘. ",
+                        aiRoll,
+                        emotionLabel,
+                        seekBar.getProgress(),
+                        mealInfo.trim().isEmpty() ? "모두 거름" : mealInfo.trim(),
+                        influenceValue,
+                        stressValue,
+                        fatigueValue,
+                        sleepValue,
+                        needValue,
+                        feedbackValue,
+                        aiQuestionValue,
+                        aiAnswerValue.trim().isEmpty() ? "답변 없음" : aiAnswerValue,
+                        diaryValue,
+                        phoneUsagePrompt
+                );
+
+                String newRecord = String.format("%s|%s|%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                         fullTime,
                         selectedEmotion,
                         seekBar.getProgress(),
-                        etDiary.getText().toString(),
+                        diaryValue,
                         mealInfo,
-                        getSelectedText(rgInfluence),
-                        getSelectedText(rgStress),
-                        getSelectedText(rgFatigue),
-                        getSelectedText(rgSleep),
-                        getSelectedText(rgNeed),
-                        getSelectedText(rgFeedback));
+                        influenceValue,
+                        stressValue,
+                        fatigueValue,
+                        sleepValue,
+                        needValue,
+                        feedbackValue,
+                        aiQuestionValue, // 👈 [추가] 11번 인덱스에 질문 저장
+                        aiAnswerValue);
 
 
                 SharedPreferences.Editor editor = pref.edit();
@@ -231,43 +347,12 @@ public class InputFragment extends Fragment {
                 editor.putString("all_records", newRecord + "##" + updatedList.toString());
                 editor.apply();
 
-                // Firestore 또는 GuestRecordStore에 데이터 저장
-                saveRecord(fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString(), "AI 분석 중...");
+                saveRecord(fullTime, mealInfo, seekBar.getProgress(), diaryValue, "AI 분석 중...");
 
-                if (getActivity() != null) {
-                    BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
-                    if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra);
-                    }
-                }
+                // 일기를 새로 완벽히 작성하고 넘어가므로, 다음 날을 위해 임시 질문 캐시 장부를 리셋합니다.
+                cachedAiQuestion = "";
+                cachedQuestionTargetDate = "";
 
-                String customPrompt = String.format(
-                        "%s" +
-                                "지금 보내주는 정보는 나의 오늘 하루 데이터야. 너는 이 데이터들을 면밀히 분석해서 말해줘"+
-                                "글은 약 400자 미민아었으면 좋겠어. 그렇다고 꼭 400자를 꽉 채울 필요는 없어. 글의 길이는 너의 필요에 따라 변경해도 괜찮아" +
-                                "\n\n" +
-                                "[오늘의 데이터]\n" +
-                                "- 선택한 감정: %s (참고: emo1은 가장 슬픔, emo5는 가장 행복)\n" +
-                                "- 컨디션 점수: %s점\n" +
-                                "- 먹은 식사: %s\n" +
-                                "- 오늘 감정에 가장 큰 영향을준 것: %s\n" +
-                                "- 스트레스 정도: %s\n" +
-                                "- 피로도: %s\n" +
-                                "- 수면 상태: %s\n" +
-                                "- 지금 나에게 필요한 것: %s\n" +
-                                "- 오늘 나의 이야기: %s\n\n" +
-                                "이 모든 정보를 종합해서 분석해줘. 특히 \"내가 받고 싶은 피드백\"은 꼭 맞춰줘야해.",
-                        aiRoll,
-                        selectedEmotion,
-                        tvScoreValue.getText().toString(),
-                        mealInfo.isEmpty() ? "모두 거름" : mealInfo,
-                        getSelectedText(rgInfluence),
-                        getSelectedText(rgStress),
-                        getSelectedText(rgFatigue),
-                        getSelectedText(rgSleep),
-                        getSelectedText(rgNeed),
-                        etDiary.getText().toString()
-                );
                 // 3. 생성된 맞춤형 프롬프트를 Gemini에게 전달
                 askGemini(customPrompt, recordedAudioBytes, audioMimeType, fullTime, mealInfo, seekBar.getProgress(), etDiary.getText().toString());
             });
@@ -276,10 +361,188 @@ public class InputFragment extends Fragment {
         return view;
     }
 
+
+    private void loadTodayRecordFromFirestore(
+            View view,
+            String uid,
+            String today,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        if (db == null || uid == null || today == null) {
+            updateEmotionHighlight(view);
+            return;
+        }
+
+        db.collection("users")
+                .document(uid)
+                .collection("daily_records")
+                .document(today)
+                .get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (!isAdded()) return;
+
+                    if (documentSnapshot == null || !documentSnapshot.exists()) {
+                        updateEmotionHighlight(view);
+                        return;
+                    }
+
+                    restoreInputFromFirestoreDocument(
+                            view,
+                            documentSnapshot,
+                            seekBar,
+                            tvScoreValue,
+                            etDiary,
+                            cbBreakfast,
+                            cbLunch,
+                            cbDinner,
+                            cbLateNight
+                    );
+                })
+                .addOnFailureListener(e -> {
+                    Log.w("Firestore", "오늘 기록 불러오기 실패", e);
+                    if (isAdded()) {
+                        updateEmotionHighlight(view);
+                    }
+                });
+    }
+
+    private void restoreInputFromFirestoreDocument(
+            View view,
+            DocumentSnapshot document,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        String emotion = document.getString("emotion");
+        if (emotion != null && !emotion.trim().isEmpty()) {
+            selectedEmotion = normalizeEmotionValue(emotion);
+        }
+        updateEmotionHighlight(view);
+
+        Long scoreLong = document.getLong("score");
+        int score = (scoreLong != null) ? scoreLong.intValue() : 80;
+        seekBar.setProgress(score);
+        tvScoreValue.setText(score + "점");
+
+        String diary = document.getString("diary");
+        etDiary.setText(diary != null ? diary : "");
+
+        String meals = document.getString("meals");
+        if (meals == null) meals = "";
+        cbBreakfast.setChecked(meals.contains("아침"));
+        cbLunch.setChecked(meals.contains("점심"));
+        cbDinner.setChecked(meals.contains("저녁"));
+        cbLateNight.setChecked(meals.contains("야식"));
+
+        setRadioCheckedByText(rgInfluence, document.getString("influence"));
+        setRadioCheckedByText(rgStress, document.getString("stress"));
+        setRadioCheckedByText(rgFatigue, document.getString("fatigue"));
+        setRadioCheckedByText(rgSleep, document.getString("sleep"));
+        setRadioCheckedByText(rgNeed, document.getString("need"));
+        setRadioCheckedByText(rgFeedback, document.getString("feedback"));
+
+        String aiQuestion = document.getString("aiQuestion");
+        if (tvAiQuestion != null && aiQuestion != null && !aiQuestion.trim().isEmpty()) {
+            tvAiQuestion.setText(aiQuestion);
+        }
+
+        String aiAnswer = document.getString("aiAnswer");
+        if (etAiAnswer != null && aiAnswer != null && !aiAnswer.trim().isEmpty()) {
+            etAiAnswer.setText(aiAnswer);
+        }
+
+        Log.d("InputFragment", "Firestore 오늘 기록을 입력 화면에 복원했습니다.");
+    }
+
+    private void restoreTodayRecordFromLocal(
+            View view,
+            String allRecords,
+            String today,
+            SeekBar seekBar,
+            TextView tvScoreValue,
+            EditText etDiary,
+            CheckBox cbBreakfast,
+            CheckBox cbLunch,
+            CheckBox cbDinner,
+            CheckBox cbLateNight
+    ) {
+        if (allRecords == null || !allRecords.contains(today)) {
+            updateEmotionHighlight(view);
+            return;
+        }
+
+        String[] recordsArray = allRecords.split("##");
+        for (String record : recordsArray) {
+            if (record.startsWith(today)) {
+                String[] detail = record.split("\\|");
+
+                if (detail.length >= 5) {
+                    if (selectedEmotion.isEmpty()) selectedEmotion = detail[1];
+                    updateEmotionHighlight(view);
+
+                    try {
+                        seekBar.setProgress(Integer.parseInt(detail[2]));
+                        tvScoreValue.setText(detail[2] + "점");
+                    } catch (NumberFormatException e) {
+                        seekBar.setProgress(80);
+                        tvScoreValue.setText("80점");
+                    }
+
+                    etDiary.setText(detail[3]);
+
+                    cbBreakfast.setChecked(detail[4].contains("아침"));
+                    cbLunch.setChecked(detail[4].contains("점심"));
+                    cbDinner.setChecked(detail[4].contains("저녁"));
+                    cbLateNight.setChecked(detail[4].contains("야식"));
+                }
+
+                if (detail.length > 5) setRadioCheckedByText(rgInfluence, detail[5]);
+                if (detail.length > 6) setRadioCheckedByText(rgStress, detail[6]);
+                if (detail.length > 7) setRadioCheckedByText(rgFatigue, detail[7]);
+                if (detail.length > 8) setRadioCheckedByText(rgSleep, detail[8]);
+                if (detail.length > 9) setRadioCheckedByText(rgNeed, detail[9]);
+                if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
+
+                if (detail.length > 11 && tvAiQuestion != null) {
+                    tvAiQuestion.setText(detail[11]);
+                }
+
+                if (detail.length > 12 && etAiAnswer != null) {
+                    etAiAnswer.setText(detail[12]);
+                }
+
+                break;
+            }
+        }
+    }
+
     private void saveRecord(String fullTime, String mealInfo, int score, String diary, String resultText) {
+        Context context = getContext();
+
+        // Gemini 응답이 늦게 돌아온 뒤 Fragment가 이미 화면에서 떨어져 있으면 requireContext()로 튕길 수 있음
+        if (context == null) {
+            Log.w("InputFragment", "Fragment context is null. Skip saving record.");
+            return;
+        }
+
         Map<String, Object> record = new HashMap<>();
         record.put("timestamp", fullTime);
-        record.put("emotion", selectedEmotion);
+
+        String normalizedEmotion = normalizeEmotionValue(selectedEmotion);
+        record.put("emotion", normalizedEmotion);
+        record.put("emotionLabel", getEmotionLabel(normalizedEmotion));
+        record.put("emotionScore", getEmotionScore(normalizedEmotion));
+
         record.put("score", score);
         record.put("diary", diary);
         record.put("meals", mealInfo);
@@ -289,9 +552,21 @@ public class InputFragment extends Fragment {
         record.put("sleep", getSelectedText(rgSleep));
         record.put("need", getSelectedText(rgNeed));
         record.put("feedback", getSelectedText(rgFeedback));
+
+        UsageStatsHelper.PhoneUsageSummary phoneSummary =
+                UsageStatsHelper.getTodayUsageSummary(context);
+
+        record.put("phoneTotalMinutes", phoneSummary.totalUsageMinutes);
+        record.put("phoneOpenCount", phoneSummary.totalOpenCount);
+        record.put("phoneShortSessionCount", phoneSummary.shortSessionCount);
+        record.put("phoneNightUsageMinutes", phoneSummary.nightUsageMinutes);
+        record.put("digitalSignalScore", phoneSummary.digitalSignalScore);
+        record.put("digitalPattern", phoneSummary.digitalPattern);
+
+        record.put("aiQuestion", (tvAiQuestion != null) ? tvAiQuestion.getText().toString() : "");
+        record.put("aiAnswer", (etAiAnswer != null) ? etAiAnswer.getText().toString() : "");
         record.put("resultText", resultText);
 
-        // 날짜를 문서 ID로 사용하여 하루에 하나의 기록만 저장 (또는 덮어쓰기)
         String dateId = fullTime.split(" ")[0];
 
         FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
@@ -303,16 +578,76 @@ public class InputFragment extends Fragment {
                     .document(dateId)
                     .set(record)
                     .addOnSuccessListener(aVoid -> {
-                        android.util.Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
+                        Log.d("Firestore", "기록이 성공적으로 저장되었습니다.");
                     })
                     .addOnFailureListener(e -> {
-                        android.util.Log.w("Firestore", "기록 저장 실패", e);
+                        Log.w("Firestore", "기록 저장 실패", e);
                     });
         } else {
-            // 게스트 모드: GuestRecordStore에 저장
-            GuestRecordStore.saveTodayRecord(getContext(), record, dateId);
-            android.util.Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
+            GuestRecordStore.saveTodayRecord(context, record, dateId);
+            Log.d("GuestMode", "게스트 기록이 저장되었습니다.");
         }
+    }
+
+    private void loadCustomQuestion(String latestDiary, final String latestDiaryDate) {
+        if (latestDiary == null || latestDiary.trim().isEmpty() || model == null) {
+            if (tvAiQuestion != null) {
+                tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
+            }
+            return;
+        }
+
+        // 🌟 [캐시 핵심 필터] 낚아챈 최근 일기의 날짜가 이미 캐싱해둔 타겟 날짜와 같고 장부가 비어있지 않다면?
+        if (latestDiaryDate.equals(cachedQuestionTargetDate) && !cachedAiQuestion.isEmpty()) {
+            if (tvAiQuestion != null) {
+                tvAiQuestion.setText(cachedAiQuestion); // 제미나이 안 부르고 0초 만에 복원!
+            }
+            return;
+        }
+
+        String formattedDate = latestDiaryDate;
+        try {
+            String[] parts = latestDiaryDate.split("-");
+            if (parts.length >= 3) {
+                formattedDate = Integer.parseInt(parts[1]) + "월 " + Integer.parseInt(parts[2]) + "일";
+            }
+        } catch (Exception e) {
+            formattedDate = latestDiaryDate;
+        }
+
+        String questionPrompt = String.format(
+                "사용자가 가장 최근(%s)에 작성했던 과거 일기 내용이야: \"%s\"\n" +
+                        "이 내용을 면밀히 분석해서, 사용자가 오늘 하루를 시작하거나 돌아보며 깊이 고찰하고 답할 수 있는 다정하고 사려 깊은 '오늘의 맞춤형 후속 질문'을 딱 한 문장으로만 만들어줘. " +
+                        "만약 어제 일기가 아니라 며칠 전 혹은 오랜만에 쓴 일기라면, 오랜만에 기록하러 온 점을 문맥상 아주 자연스럽고 다정하게 언급하면서 후속 질문을 유기적으로 이어가줘. " +
+                        "다른 부연 설명이나 인사말은 절대 하지 말고 오직 질문 문장 한 줄만 출력해줘.",
+                formattedDate, latestDiary
+        );
+
+        Content prompt = new Content.Builder().addText(questionPrompt).build();
+        Executor executor = ContextCompat.getMainExecutor(requireContext());
+        ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
+
+        Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
+            @Override
+            public void onSuccess(GenerateContentResponse result) {
+                if (isAdded() && tvAiQuestion != null) {
+                    String questionText = result.getText().trim();
+
+                    // 🌟 [캐시 기록] 생성된 따끈따끈한 질문과 분석한 과거 일기 날짜를 장부에 도장 찍기
+                    cachedAiQuestion = questionText;
+                    cachedQuestionTargetDate = latestDiaryDate;
+
+                    tvAiQuestion.setText(questionText);
+                }
+            }
+
+            @Override
+            public void onFailure(Throwable t) {
+                if (isAdded() && tvAiQuestion != null) {
+                    tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
+                }
+            }
+        }, executor);
     }
 
     private void setupToggleableRadioGroup(RadioGroup radioGroup) {
@@ -411,7 +746,7 @@ public class InputFragment extends Fragment {
 
     private void setupEmotionSelection(View view) {
         int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
-        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+        String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
             final String code = codes[i];
@@ -428,7 +763,7 @@ public class InputFragment extends Fragment {
 
     private void updateEmotionHighlight(View view) {
         int[] resIds = {R.id.btnHappy, R.id.btnSmile, R.id.btnNeutral, R.id.btnSad, R.id.btnAngry};
-        String[] codes = {"emo1", "emo2", "emo3", "emo4", "emo5"};
+        String[] codes = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
         for (int i = 0; i < resIds.length; i++) {
             ImageButton button = view.findViewById(resIds[i]);
@@ -492,12 +827,55 @@ public class InputFragment extends Fragment {
 
         Content prompt = contentBuilder.build();
         Executor executor = ContextCompat.getMainExecutor(requireContext());
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private int getEmotionScore(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("raw_emo1".equals(value) || "매우_안좋아요".equals(value)) return 1;
+        if ("raw_emo2".equals(value) || "안좋아요".equals(value)) return 2;
+        if ("raw_emo3".equals(value) || "보통이에요".equals(value)) return 3;
+        if ("raw_emo4".equals(value) || "좋아요".equals(value)) return 4;
+        if ("raw_emo5".equals(value) || "매우_좋아요".equals(value)) return 5;
+
+        return 3;
+    }
+
+    private void askGemini(String userPrompt, String fullTime, String mealInfo, int score, String diary) {
+        Context context = getContext();
+        if (model == null || context == null) return;
+
+        Content prompt = new Content.Builder().addText(userPrompt).build();
+        Executor executor = ContextCompat.getMainExecutor(context);
         ListenableFuture<GenerateContentResponse> response = model.generateContent(prompt);
 
         Futures.addCallback(response, new FutureCallback<GenerateContentResponse>() {
             @Override
             public void onSuccess(GenerateContentResponse result) {
-                String resultText = result.getText(); // AI 답변 추출
+                String resultText = (result != null) ? result.getText() : null;
 
                 String finalDiary = diary;
                 String cleanAiResponse = resultText;
@@ -522,12 +900,16 @@ public class InputFragment extends Fragment {
                 saveRecord(fullTime, mealInfo, score, finalDiary, cleanAiResponse);
 
                 clearTemporaryAudioData();
+                if (resultText == null || resultText.trim().isEmpty()) {
+                    resultText = "AI 피드백을 생성하지 못했어요.";
+                }
 
-                // 4. 하단 네비게이션을 통해 화면 이동
-                if (getActivity() != null) {
+                saveRecord(fullTime, mealInfo, score, diary, resultText);
+
+                if (isAdded() && getActivity() != null) {
                     BottomNavigationView bottomNav = getActivity().findViewById(R.id.bottomNav);
                     if (bottomNav != null) {
-                        bottomNav.setSelectedItemId(R.id.extra); // 기록 확인 화면으로 이동
+                        bottomNav.setSelectedItemId(R.id.extra);
                     }
                 }
             }

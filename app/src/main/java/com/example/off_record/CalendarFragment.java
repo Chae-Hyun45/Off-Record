@@ -286,12 +286,7 @@ public class CalendarFragment extends Fragment {
             GuestRecordStore.clearIfNotToday(requireContext());
             Map<String, Object> guestRecord = GuestRecordStore.getTodayRecord(requireContext());
             if (guestRecord != null && dateKey.equals(String.valueOf(guestRecord.get("date")))) {
-                showRecordDetail(
-                        String.valueOf(guestRecord.get("emotion")),
-                        String.valueOf(guestRecord.get("score")),
-                        String.valueOf(guestRecord.get("diary")),
-                        String.valueOf(guestRecord.get("stress"))
-                );
+                showRecordDetail(guestRecord, dateKey);
             } else {
                 showEmptyState("게스트 기록은 오늘 하루 기록만 볼 수 있습니다.");
             }
@@ -303,12 +298,7 @@ public class CalendarFragment extends Fragment {
                 .addOnSuccessListener(documentSnapshot -> {
                     if (!isAdded()) return;
                     if (documentSnapshot.exists()) {
-                        String emotion = documentSnapshot.getString("emotion");
-                        Long scoreLong = documentSnapshot.getLong("score");
-                        String score = (scoreLong != null) ? String.valueOf(scoreLong) : "-";
-                        String diary = documentSnapshot.getString("diary");
-                        String stress = documentSnapshot.getString("stress");
-                        showRecordDetail(emotion, score, diary, stress);
+                        showRecordDetail(documentSnapshot.getData(), dateKey);
                     } else {
                         showEmptyState("이날의 기록이 없습니다.");
                     }
@@ -320,23 +310,115 @@ public class CalendarFragment extends Fragment {
                 });
     }
 
-    private void showRecordDetail(String emotion, String score, String diary, String stress) {
-        if (stress == null || stress.isEmpty() || stress.equals("미선택")) stress = "-";
-        if (score == null || score.isEmpty()) score = "-";
+    private void showRecordDetail(Map<String, Object> data, String dateKey) {
+        if (data == null) return;
+
+        String emotion = String.valueOf(data.get("emotion"));
+        Object scoreObj = data.get("score");
+        String scoreVal = (scoreObj != null) ? String.valueOf(scoreObj) : "-";
+        String diaryVal = String.valueOf(data.get("diary"));
+        String stressVal = String.valueOf(data.get("stress"));
+
+        if (stressVal.isEmpty() || stressVal.equals("미선택") || stressVal.equals("null")) stressVal = "-";
+        if (scoreVal.isEmpty() || scoreVal.equals("null")) scoreVal = "-";
+
+        final String finalScore = scoreVal;
+        final String finalStress = stressVal;
+        final String finalDiary = (diaryVal.isEmpty() || diaryVal.equals("null")) ? "작성된 일기 내용이 없습니다." : diaryVal;
 
         showRecordEmoji(emotion);
-        tvRecordStatus.setText("감정 기록");
+        tvRecordStatus.setText(getEmotionLabel(emotion) + " | " + formatScore(finalScore));
         tvRecordStatus.setTextColor(getEmotionStatusColor(emotion));
         tvRecordStatus.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        tvScoreChip.setText("점수 | " + score + "점");
-        tvStressChip.setText("스트레스 | " + stress);
-        detailText.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
+        tvScoreChip.setText("점수 | " + finalScore + "점");
+        tvStressChip.setText("스트레스 | " + finalStress);
+        detailText.setText(finalDiary);
+
+        // 하단 상세 정보 영역 클릭 시 상세 화면으로 이동
+        View detailContainer = (View) detailText.getParent();
+        if (detailContainer != null) {
+            detailContainer.setOnClickListener(v -> {
+                String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                        data.get("timestamp") != null ? data.get("timestamp") : dateKey + " 00:00",
+                        emotion,
+                        finalScore,
+                        finalDiary,
+                        safeString(data.get("meals")),
+                        safeString(data.get("influence")),
+                        finalStress,
+                        safeString(data.get("fatigue")),
+                        safeString(data.get("sleep")),
+                        safeString(data.get("need")),
+                        safeString(data.get("feedback")),
+                        safeString(data.get("resultText")),
+                        safeString(data.get("phoneTotalMinutes")),
+                        safeString(data.get("phoneOpenCount")),
+                        safeString(data.get("phoneShortSessionCount")),
+                        safeString(data.get("phoneNightUsageMinutes")),
+                        safeString(data.get("digitalSignalScore")),
+                        safeString(data.get("digitalPattern"))
+                );
+
+                RecordDetailFragment fragment = new RecordDetailFragment();
+                Bundle bundle = new Bundle();
+                bundle.putString("record", formattedRecord);
+                fragment.setArguments(bundle);
+
+                requireActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.frameLayout, fragment)
+                        .addToBackStack(null) // 뒤로가기 시 캘린더로 돌아오게 함
+                        .commit();
+            });
+        }
+    }
+
+    private String safeString(Object value) {
+        if (value == null) return "";
+        String text = String.valueOf(value);
+        if ("null".equals(text)) return "";
+        return text;
     }
 
     private void showRecordEmoji(String emotion) {
         selectedEmoji.setVisibility(View.VISIBLE);
         tvQuestionMark.setVisibility(View.GONE);
         selectedEmoji.setImageResource(getEmojiImage(emotion));
+    }
+
+
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) return "매우_안좋아요";
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) return "안좋아요";
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) return "보통이에요";
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) return "좋아요";
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) return "매우_좋아요";
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private String formatScore(String score) {
+        if (score == null || score.trim().isEmpty() || "-".equals(score.trim())) {
+            return "-";
+        }
+
+        String value = score.trim();
+        if (value.endsWith("점")) return value;
+        return value + "점";
     }
 
     private void showEmptyState(String message) {
@@ -348,17 +430,23 @@ public class CalendarFragment extends Fragment {
         tvScoreChip.setText("점수 | -");
         tvStressChip.setText("스트레스 | -");
         detailText.setText(message);
+
+        // 기록이 없는 경우 클릭 리스너 제거
+        View detailContainer = (View) detailText.getParent();
+        if (detailContainer != null) {
+            detailContainer.setOnClickListener(null);
+        }
     }
 
     private int getEmotionFaceColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#E3EFE5");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#6F7573"); // one.png 얼굴색
-            case "emo2": return Color.parseColor("#45714D"); // two.png 얼굴색
-            case "emo3": return Color.parseColor("#85B785"); // three.png 얼굴색
-            case "emo4": return Color.parseColor("#CDE099"); // four.png 얼굴색
-            case "emo5": return Color.parseColor("#FEE99C"); // five.png 얼굴색
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#6F7573");
+            case "안좋아요": return Color.parseColor("#45714D");
+            case "보통이에요": return Color.parseColor("#85B785");
+            case "좋아요": return Color.parseColor("#CDE099");
+            case "매우_좋아요": return Color.parseColor("#FEE99C");
             default: return Color.parseColor("#E3EFE5");
         }
     }
@@ -368,40 +456,40 @@ public class CalendarFragment extends Fragment {
     }
 
     private int getEmotionStrokeColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#8B918B");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#D8BE4F");
-            case "emo2": return Color.parseColor("#97B85F");
-            case "emo3": return Color.parseColor("#4F965C");
-            case "emo4": return Color.parseColor("#2F5F3B");
-            case "emo5": return Color.parseColor("#555D5A");
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#555D5A");
+            case "안좋아요": return Color.parseColor("#2F5F3B");
+            case "보통이에요": return Color.parseColor("#4F965C");
+            case "좋아요": return Color.parseColor("#97B85F");
+            case "매우_좋아요": return Color.parseColor("#D8BE4F");
             default: return Color.parseColor("#8B918B");
         }
     }
 
     private int getEmotionStatusColor(String emotionCode) {
-        if (emotionCode == null) return Color.parseColor("#2F4637");
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return Color.parseColor("#C9A93C");
-            case "emo2": return Color.parseColor("#7EA052");
-            case "emo3": return Color.parseColor("#4F965C");
-            case "emo4": return Color.parseColor("#3C7852");
-            case "emo5": return Color.parseColor("#6F7573");
-            default: return Color.parseColor("#2F4637");
+        switch (emotion) {
+            case "매우_안좋아요": return Color.parseColor("#6F7573");
+            case "안좋아요": return Color.parseColor("#45714D");
+            case "보통이에요": return Color.parseColor("#4F965C");
+            case "좋아요": return Color.parseColor("#7EA052");
+            case "매우_좋아요": return Color.parseColor("#C9A93C");
+            default: return Color.parseColor("#777777");
         }
     }
 
     private int getEmojiImage(String emotionCode) {
-        if (emotionCode == null) return R.drawable.three;
+        String emotion = normalizeEmotionValue(emotionCode);
 
-        switch (emotionCode) {
-            case "emo1": return R.drawable.one;
-            case "emo2": return R.drawable.two;
-            case "emo3": return R.drawable.three;
-            case "emo4": return R.drawable.four;
-            case "emo5": return R.drawable.five;
+        switch (emotion) {
+            case "매우_안좋아요": return R.drawable.one;
+            case "안좋아요": return R.drawable.two;
+            case "보통이에요": return R.drawable.three;
+            case "좋아요": return R.drawable.four;
+            case "매우_좋아요": return R.drawable.five;
             default: return R.drawable.three;
         }
     }

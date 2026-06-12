@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
@@ -26,6 +27,7 @@ public class MainActivity extends AppCompatActivity {
 
     BottomNavigationView bottomNav;
     FirebaseFirestore db;
+    private long backPressedTime = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,6 +42,9 @@ public class MainActivity extends AppCompatActivity {
 
         // 앱이 켜질 때, 사용자가 알림을 켜둔 상태라면 매일 알림을 다시 예약
         setupDailyAlarm();
+
+        // 매일 자정 사용 데이터 자동 동기화 예약
+        DailyUsageSyncWorker.enqueueDailyWork(this);
 
         // 1. 앱 실행 시 첫 화면은 캘린더로 설정
         if (savedInstanceState == null) {
@@ -93,6 +98,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    public void onBackPressed() {
+        // 프래그먼트 백스택이 있으면 (예: 캘린더 상세화면) 이전 화면으로 이동
+        if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+            super.onBackPressed();
+        } else {
+            // 루트 화면(캘린더, 통계 등)인 경우 두 번 눌러 종료
+            if (System.currentTimeMillis() - backPressedTime < 2000) {
+                super.onBackPressed();
+                finish();
+            } else {
+                backPressedTime = System.currentTimeMillis();
+                Toast.makeText(this, "뒤로가기를 한 번 더 누르시면 앱이 종료됩니다.", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
     private void updateFabPosition(int itemId) {
         ImageButton fabAdd = findViewById(R.id.fabAdd);
         if (fabAdd == null) return;
@@ -134,8 +156,12 @@ public class MainActivity extends AppCompatActivity {
         }
 
         int[] emojiIds = {R.id.emo1, R.id.emo2, R.id.emo3, R.id.emo4, R.id.emo5};
+        String[] emotionValues = {"매우_안좋아요", "안좋아요", "보통이에요", "좋아요", "매우_좋아요"};
 
-        for (int id : emojiIds) {
+        for (int i = 0; i < emojiIds.length; i++) {
+            int id = emojiIds[i];
+            String emotionValue = emotionValues[i];
+
             View btn = dialog.findViewById(id);
             if (btn != null) {
                 btn.setOnClickListener(v -> {
@@ -144,8 +170,7 @@ public class MainActivity extends AppCompatActivity {
                     InputFragment fragment = new InputFragment();
                     Bundle bundle = new Bundle();
 
-                    String emotionKey = getResources().getResourceEntryName(id);
-                    bundle.putString("selected_emotion", emotionKey);
+                    bundle.putString("selected_emotion", emotionValue);
                     fragment.setArguments(bundle);
 
                     getSupportFragmentManager().beginTransaction()

@@ -131,21 +131,95 @@
                 </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvDetailDiary"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="내가 쓴 일기"
+                    android:textColor="#2D2D2D"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="22dp"
-                    android:lineSpacingExtra="5dp"
-                    android:text="기록 내용"
-                    android:textColor="#2F2F2F"
-                    android:textSize="18sp" />
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/detail_diary_box_bg"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="✍️ 오늘의 기록"
+                        android:textColor="#616161"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvDetailDiary"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="6dp"
+                        android:text="기록 내용"
+                        android:textColor="#2F2F2F"
+                        android:textSize="17sp" />
+                </LinearLayout>
 
                 <TextView
-                    android:id="@+id/tvResultView"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="22dp"
+                    android:text="AI 피드백"
+                    android:textColor="#2D2D2D"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="당신을 위한 조언을 작성하고있어요..."
-                    android:padding="16dp" />
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/detail_ai_box_bg"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/detail_ai_badge_bg"
+                            android:paddingHorizontal="10dp"
+                            android:paddingVertical="5dp"
+                            android:text="AI"
+                            android:textColor="#8A6B00"
+                            android:textSize="12sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="오늘의 위로와 조언"
+                            android:textColor="#7A6A2B"
+                            android:textSize="13sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvResultView"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:lineSpacingExtra="6dp"
+                        android:text="당신을 위한 조언을 작성하고있어요..."
+                        android:textColor="#3A3424"
+                        android:textSize="16sp" />
+                </LinearLayout>
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 

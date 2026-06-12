@@ -28,7 +28,9 @@ public class ExtraFragment extends Fragment {
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+
         View view = inflater.inflate(R.layout.fragment_extra, container, false);
+
         recordsContainer = view.findViewById(R.id.recordsContainer);
         tvArchiveSummary = view.findViewById(R.id.tvArchiveSummary);
 
@@ -49,6 +51,7 @@ public class ExtraFragment extends Fragment {
         }
 
         String uid = currentUser.getUid();
+
         db.collection("users")
                 .document(uid)
                 .collection("daily_records")
@@ -88,33 +91,44 @@ public class ExtraFragment extends Fragment {
                         TextView tvMeta = itemView.findViewById(R.id.tvItemMeta);
 
                         tvDateTag.setText(dayText);
+
                         String diary = doc.getString("diary");
                         tvDiary.setText(diary == null || diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
 
                         Object scoreObj = doc.get("score");
                         String score = (scoreObj != null) ? String.valueOf(scoreObj) : "-";
-                        tvMeta.setText("점수 | " + score + "점");
 
                         String emotion = doc.getString("emotion");
+                        String emotionLabel = doc.getString("emotionLabel");
+                        if (emotionLabel == null || emotionLabel.trim().isEmpty()) {
+                            emotionLabel = getEmotionLabel(emotion);
+                        }
+
+                        tvMeta.setText(emotionLabel + " · " + score + "점");
                         ivEmoji.setImageResource(getEmojiImage(emotion));
 
                         itemView.setClickable(true);
                         itemView.setFocusable(true);
                         itemView.setOnClickListener(v -> {
-                            // 상세 화면으로 전달할 데이터를 생성 (기존 방식 호환을 위해 포맷팅)
-                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+                            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                                     fullDate,
                                     emotion,
                                     score,
                                     diary,
-                                    doc.getString("meals"),
-                                    doc.getString("influence"),
-                                    doc.getString("stress"),
-                                    doc.getString("fatigue"),
-                                    doc.getString("sleep"),
-                                    doc.getString("need"),
-                                    doc.getString("feedback"),
-                                    doc.getString("resultText")
+                                    safeString(doc.get("meals")),
+                                    safeString(doc.get("influence")),
+                                    safeString(doc.get("stress")),
+                                    safeString(doc.get("fatigue")),
+                                    safeString(doc.get("sleep")),
+                                    safeString(doc.get("need")),
+                                    safeString(doc.get("feedback")),
+                                    safeString(doc.get("resultText")),
+                                    safeString(doc.get("phoneTotalMinutes")),
+                                    safeString(doc.get("phoneOpenCount")),
+                                    safeString(doc.get("phoneShortSessionCount")),
+                                    safeString(doc.get("phoneNightUsageMinutes")),
+                                    safeString(doc.get("digitalSignalScore")),
+                                    safeString(doc.get("digitalPattern"))
                             );
 
                             RecordDetailFragment fragment = new RecordDetailFragment();
@@ -142,6 +156,7 @@ public class ExtraFragment extends Fragment {
 
     private void loadGuestTodayRecord(LayoutInflater inflater) {
         GuestRecordStore.clearIfNotToday(requireContext());
+
         Map<String, Object> record = GuestRecordStore.getTodayRecord(requireContext());
 
         if (record == null) {
@@ -155,35 +170,48 @@ public class ExtraFragment extends Fragment {
         recordsContainer.addView(createMonthHeader(dateInfo[1]));
 
         View itemView = inflater.inflate(R.layout.item_record, recordsContainer, false);
+
         ImageView ivEmoji = itemView.findViewById(R.id.ivItemEmoji);
         TextView tvDateTag = itemView.findViewById(R.id.tvItemDateTag);
         TextView tvDiary = itemView.findViewById(R.id.tvItemDiary);
         TextView tvMeta = itemView.findViewById(R.id.tvItemMeta);
 
-        String emotion = String.valueOf(record.get("emotion"));
-        String diary = String.valueOf(record.get("diary"));
-        String score = String.valueOf(record.get("score"));
+        String emotion = safeString(record.get("emotion"));
+        String emotionLabel = safeString(record.get("emotionLabel"));
+        if (emotionLabel.isEmpty() || "null".equals(emotionLabel)) {
+            emotionLabel = getEmotionLabel(emotion);
+        }
+
+        String diary = safeString(record.get("diary"));
+        String score = safeString(record.get("score"));
 
         tvDateTag.setText(dateInfo[2]);
         tvDiary.setText(diary.isEmpty() ? "작성된 일기 내용이 없습니다." : diary);
-        tvMeta.setText("점수 | " + score + "점");
+        tvMeta.setText(emotionLabel + " · " + score + "점");
         ivEmoji.setImageResource(getEmojiImage(emotion));
 
         itemView.setClickable(true);
         itemView.setFocusable(true);
         itemView.setOnClickListener(v -> {
-            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
+            String formattedRecord = String.format("%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s",
                     fullDate,
                     emotion,
                     score,
                     diary,
-                    record.get("meals"),
-                    record.get("influence"),
-                    record.get("stress"),
-                    record.get("fatigue"),
-                    record.get("sleep"),
-                    record.get("need"),
-                    record.get("feedback")
+                    safeString(record.get("meals")),
+                    safeString(record.get("influence")),
+                    safeString(record.get("stress")),
+                    safeString(record.get("fatigue")),
+                    safeString(record.get("sleep")),
+                    safeString(record.get("need")),
+                    safeString(record.get("feedback")),
+                    safeString(record.get("resultText")),
+                    safeString(record.get("phoneTotalMinutes")),
+                    safeString(record.get("phoneOpenCount")),
+                    safeString(record.get("phoneShortSessionCount")),
+                    safeString(record.get("phoneNightUsageMinutes")),
+                    safeString(record.get("digitalSignalScore")),
+                    safeString(record.get("digitalPattern"))
             );
 
             RecordDetailFragment fragment = new RecordDetailFragment();
@@ -225,6 +253,7 @@ public class ExtraFragment extends Fragment {
 
         View line = new View(getContext());
         line.setBackgroundColor(Color.parseColor("#E2E2E2"));
+
         LinearLayout.LayoutParams lineParams = new LinearLayout.LayoutParams(
                 0,
                 dpToPx(1),
@@ -251,6 +280,7 @@ public class ExtraFragment extends Fragment {
         );
         emptyParams.topMargin = dpToPx(70);
         emptyTv.setLayoutParams(emptyParams);
+
         return emptyTv;
     }
 
@@ -273,17 +303,64 @@ public class ExtraFragment extends Fragment {
         }
     }
 
-    private int getEmojiImage(String emotionCode) {
-        if ("emo1".equals(emotionCode)) return R.drawable.one;
-        if ("emo2".equals(emotionCode)) return R.drawable.two;
-        if ("emo3".equals(emotionCode)) return R.drawable.three;
-        if ("emo4".equals(emotionCode)) return R.drawable.four;
-        if ("emo5".equals(emotionCode)) return R.drawable.five;
+    private String normalizeEmotionValue(String emotionValue) {
+        if (emotionValue == null) return "";
+
+        String value = emotionValue.trim();
+
+        if ("emo1".equals(value) || "one".equals(value) || "매우_안좋아요".equals(value) || "매우 안 좋아요".equals(value)) {
+            return "매우_안좋아요";
+        }
+        if ("emo2".equals(value) || "two".equals(value) || "안좋아요".equals(value) || "안 좋아요".equals(value)) {
+            return "안좋아요";
+        }
+        if ("emo3".equals(value) || "three".equals(value) || "보통이에요".equals(value)) {
+            return "보통이에요";
+        }
+        if ("emo4".equals(value) || "four".equals(value) || "좋아요".equals(value)) {
+            return "좋아요";
+        }
+        if ("emo5".equals(value) || "five".equals(value) || "매우_좋아요".equals(value) || "매우 좋아요".equals(value)) {
+            return "매우_좋아요";
+        }
+
+        return value;
+    }
+
+    private String getEmotionLabel(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return "매우 안 좋아요";
+        if ("안좋아요".equals(value)) return "안 좋아요";
+        if ("보통이에요".equals(value)) return "보통이에요";
+        if ("좋아요".equals(value)) return "좋아요";
+        if ("매우_좋아요".equals(value)) return "매우 좋아요";
+
+        return "감정 미선택";
+    }
+
+    private int getEmojiImage(String emotionValue) {
+        String value = normalizeEmotionValue(emotionValue);
+
+        if ("매우_안좋아요".equals(value)) return R.drawable.one;
+        if ("안좋아요".equals(value)) return R.drawable.two;
+        if ("보통이에요".equals(value)) return R.drawable.three;
+        if ("좋아요".equals(value)) return R.drawable.four;
+        if ("매우_좋아요".equals(value)) return R.drawable.five;
+
         return R.drawable.three;
+    }
+
+    private String safeString(Object value) {
+        if (value == null) return "";
+        String text = String.valueOf(value);
+        if ("null".equals(text)) return "";
+        return text;
     }
 
     private int dpToPx(int dp) {
         if (getContext() == null) return dp;
+
         float density = getContext().getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
     }

@@ -35,7 +35,6 @@
                 android:layout_gravity="center"
                 android:layout_marginBottom="24dp"/>
 
-            <!-- 감정 선택 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -68,7 +67,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 영향 요인 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -98,7 +96,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 스트레스 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -123,7 +120,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 피로도 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -148,7 +144,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 수면 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -173,7 +168,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 점수 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -187,7 +181,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 식사 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -205,7 +198,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 필요한 것 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -231,7 +223,6 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 피드백 타입 -->
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -252,7 +243,69 @@
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- 일기 -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="15dp"
+                app:cardElevation="0dp"
+                android:layout_marginBottom="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:layout_marginBottom="12dp">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="오늘의 맞춤 질문"
+                            android:textColor="#333333"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textSize="16sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvAiQuestion"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="질문을 불러오는 중입니다... 🔮"
+                        android:textColor="#2E7D32"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:lineSpacingExtra="4dp"
+                        android:layout_marginBottom="12dp" />
+
+                    <EditText
+                        android:id="@+id/etAiAnswer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="48dp"
+                        android:hint="여기에 답변을 입력해 주세요."
+                        android:textColorHint="#BBBBBB"
+                        android:textColor="#333333"
+                        android:textSize="14sp"
+                        android:background="@null"
+                        android:gravity="top|start"
+                        android:importantForAutofill="no"
+                        android:inputType="textMultiLine" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
             <androidx.cardview.widget.CardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
