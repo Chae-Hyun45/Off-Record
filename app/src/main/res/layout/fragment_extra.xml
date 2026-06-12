@@ -19,8 +19,7 @@
         android:clipToPadding="false"
         android:paddingBottom="100dp"
         android:background="@android:color/transparent"
-        app:layout_constraintTop_toTopOf="@id/gl_top"
-        app:layout_constraintBottom_toBottomOf="parent">
+        app:layout_constraintTop_toTopOf="@id/gl_top" app:layout_constraintBottom_toBottomOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -47,6 +46,21 @@
                 android:text="소중한 기록들이 모여있어요"
                 android:textColor="@color/text_secondary"
                 android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvGuestNoticeLog"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:gravity="center"
+                android:text="※ 비로그인 모드에서는 작성하신 일기가 당일 자정(24:00)까지만 유지됩니다."
+                android:textColor="#FF8800"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
             <LinearLayout
                 android:id="@+id/recordsContainer"

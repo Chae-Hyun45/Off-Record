@@ -124,12 +124,10 @@ public class InputFragment extends Fragment {
         setupToggleableRadioGroup(rgNeed);
         setupToggleableRadioGroup(rgFeedback);
 
-        // 🌟 [구조 변경] onCreateView 내부의 복잡한 로딩/초기화 코드를 실시간 추적이 가능한 리프레시 전담 함수로 통합 이관했습니다.
         refreshTodayData(view);
 
         if (btnComplete != null) {
             btnComplete.setOnClickListener(v -> {
-                // 클릭 시점에 유저 세션을 다시 체크해 독립 샌드박스 장부를 안전하게 재생성
                 FirebaseUser freshUser = FirebaseAuth.getInstance().getCurrentUser();
                 String freshSuffix = (freshUser != null) ? freshUser.getUid() : "guest";
                 SharedPreferences freshPref = requireActivity().getSharedPreferences("DailyRecords_" + freshSuffix, Context.MODE_PRIVATE);
@@ -250,7 +248,6 @@ public class InputFragment extends Fragment {
         return view;
     }
 
-    // 🌟 [독립 신설 및 통합 완료] onCreateView 내부에 있던 데이터 바인딩 및 자정 판단 파이프라인
     private void refreshTodayData(View view) {
         if (view == null || !isAdded()) return;
 
@@ -262,6 +259,9 @@ public class InputFragment extends Fragment {
         CheckBox cbDinner = view.findViewById(R.id.cbDinner);
         CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
         TextView inputDateText = view.findViewById(R.id.inputDateText);
+
+        // 🌟 [추가] XML에 매핑해 둔 tvGuestNotice 텍스트뷰 찾아오기
+        TextView tvGuestNotice = view.findViewById(R.id.tvGuestNotice);
 
         clearAllGroups();
         etDiary.setText("");
@@ -287,9 +287,12 @@ public class InputFragment extends Fragment {
 
         SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords_" + userSuffix, Context.MODE_PRIVATE);
 
-        // 🌟 [핵심 기획 이식: 게스트 24시 데이터 자동 파기 처리]
         if (currentUser == null) {
-            // 1. 단일 데이터 보관용 GuestRecordStore 자정 만료 가동
+            // 🌟 [추가 기획 이식] 게스트 모드일 때 안내문구 강제로 화면에 노출시키기
+            if (tvGuestNotice != null) {
+                tvGuestNotice.setVisibility(View.VISIBLE);
+            }
+
             GuestRecordStore.clearIfNotToday(requireContext());
 
             String currentAllRecords = pref.getString("all_records", "");
@@ -303,11 +306,15 @@ public class InputFragment extends Fragment {
                         break;
                     }
                 }
-                // 2. 만약 장부에 어제 이전의 기록만 있고 '오늘 생성된 기록'이 단 한 줄도 없다면 즉시 초기화!
                 if (!isTodayRecordExist) {
                     pref.edit().putString("all_records", "").apply();
                     Log.d("GuestMode", "24시 자정이 지나 게스트 데이터가 안전하게 자동 파기 및 초기화되었습니다. 🧼");
                 }
+            }
+        } else {
+            // 🌟 [추가 기획 이식] 로그인 계정일 때는 안내문구를 완벽하게 숨기기
+            if (tvGuestNotice != null) {
+                tvGuestNotice.setVisibility(View.GONE);
             }
         }
 
@@ -344,7 +351,6 @@ public class InputFragment extends Fragment {
         }
     }
 
-    // 🌟 [생명주기 동기화 감시망 추가] 유저가 탭을 바꾸거나 홈 화면을 갔다 와서 화면을 다시 마주할 때 리프레시 실시간 가동
     @Override
     public void onHiddenChanged(boolean hidden) {
         super.onHiddenChanged(hidden);

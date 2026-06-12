@@ -26,6 +26,9 @@ public class ExtraFragment extends Fragment {
     private LinearLayout recordsContainer;
     private TextView tvArchiveSummary;
 
+    // 🌟 [추가] XML에 그려놓은 게스트 안내 문구 컴포넌트 변수 선언
+    private TextView tvGuestNoticeLog;
+
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
@@ -34,12 +37,48 @@ public class ExtraFragment extends Fragment {
         recordsContainer = view.findViewById(R.id.recordsContainer);
         tvArchiveSummary = view.findViewById(R.id.tvArchiveSummary);
 
+        // 🌟 [추가] XML 명찰 바인딩 매핑 완료
+        tvGuestNoticeLog = view.findViewById(R.id.tvGuestNoticeLog);
+
         db = FirebaseFirestore.getInstance();
         recordsContainer.removeAllViews();
+
+        // 🌟 [추가] 진입 시점에 유저 세션을 검사해 문구 토글 발동
+        updateGuestNoticeVisibility();
 
         loadRecordsFromFirestore(inflater);
 
         return view;
+    }
+
+    // 🌟 [신설] 현재 명찰(로그인 상태)을 실시간으로 감지해서 안내 문구 가시성을 켜고 끄는 핵심 제어 함수
+    private void updateGuestNoticeVisibility() {
+        if (tvGuestNoticeLog == null) return;
+
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        if (currentUser == null) {
+            // 비로그인 게스트 모드일 때만 스크롤 뷰 중간에 이쁘게 노출!
+            tvGuestNoticeLog.setVisibility(View.VISIBLE);
+        } else {
+            // 회원 로그인 상태일 때는 흔적도 없이 완전히 숨기기 (공간 차지 무력화)
+            tvGuestNoticeLog.setVisibility(View.GONE);
+        }
+    }
+
+    // 🌟 [생명주기 동기화 감시망 1] 다른 탭에 갔다가 로그 탭으로 돌아왔을 때 실시간 문구 업데이트
+    @Override
+    public void onHiddenChanged(boolean hidden) {
+        super.onHiddenChanged(hidden);
+        if (!hidden) {
+            updateGuestNoticeVisibility();
+        }
+    }
+
+    // 🌟 [생명주기 동기화 감시망 2] 홈 화면을 갔다 오거나 액티비티가 다시 활성화될 때 실시간 문구 업데이트
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateGuestNoticeVisibility();
     }
 
     private void loadRecordsFromFirestore(LayoutInflater inflater) {
@@ -55,7 +94,7 @@ public class ExtraFragment extends Fragment {
         db.collection("users")
                 .document(uid)
                 .collection("daily_records")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .orderBy("timestamp", Query.Direction.DESCENDING) // Note: 기존 작성 코드가 DESCENDING 형태임
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (queryDocumentSnapshots.isEmpty()) {
