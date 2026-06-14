@@ -220,6 +220,20 @@
                         android:textColor="#3A3424"
                         android:textSize="16sp" />
                 </LinearLayout>
+
+                <Button
+                    android:id="@+id/btnStartChat"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="18dp"
+                    android:background="@drawable/gradient_button_bg"
+                    android:text="💬  AI와 더 얘기하기"
+                    android:textColor="#FFFFFF"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null" />
+
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -238,5 +252,98 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:orientation="vertical" />
+
+        <LinearLayout
+            android:id="@+id/chatSection"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="28dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/detail_ai_badge_bg"
+                    android:paddingHorizontal="10dp"
+                    android:paddingVertical="5dp"
+                    android:text="AI"
+                    android:textColor="#8A6B00"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="8dp"
+                    android:text="AI와의 대화"
+                    android:textColor="#252525"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ScrollView
+                android:id="@+id/chatScrollView"
+                android:layout_width="match_parent"
+                android:layout_height="320dp"
+                android:background="#FFFFFF"
+                android:padding="12dp">
+
+                <LinearLayout
+                    android:id="@+id/chatContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </ScrollView>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <EditText
+                    android:id="@+id/etChatInput"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="48dp"
+                    android:background="@drawable/archive_date_bg"
+                    android:hint="AI에게 더 물어보기..."
+                    android:textColor="#2F2F2F"
+                    android:textSize="15sp"
+                    android:paddingHorizontal="14dp"
+                    android:inputType="textMultiLine"
+                    android:maxLines="3"
+                    android:imeOptions="actionSend" />
+
+                <Button
+                    android:id="@+id/btnChatSend"
+                    android:layout_width="52dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="8dp"
+                    android:background="@drawable/gradient_button_bg"
+                    android:text="↑"
+                    android:textColor="#FFFFFF"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:elevation="0dp"
+                    android:stateListAnimator="@null" />
+            </LinearLayout>
+
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="32dp" />
+
     </LinearLayout>
 </ScrollView>
