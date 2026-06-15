@@ -33,6 +33,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.Query;
 
 import java.util.Calendar;
 import java.text.SimpleDateFormat;
@@ -51,12 +52,15 @@ public class InputFragment extends Fragment {
     private TextView tvAiQuestion, tvVoiceStatus;
     private EditText etAiAnswer;
 
+    // 🌟 [격리 완비] 유저 간 질문 전염을 막기 위한 고유 유저 식별 캐시 변수 탑재
     private static String cachedAiQuestion = "";
     private static String cachedQuestionTargetDate = "";
+    private static String cachedUserSuffix = "";
 
     public static void resetCache() {
         cachedAiQuestion = "";
         cachedQuestionTargetDate = "";
+        cachedUserSuffix = "";
     }
 
     private ImageButton btnVoiceInput;
@@ -259,8 +263,6 @@ public class InputFragment extends Fragment {
         CheckBox cbDinner = view.findViewById(R.id.cbDinner);
         CheckBox cbLateNight = view.findViewById(R.id.cbLateNight);
         TextView inputDateText = view.findViewById(R.id.inputDateText);
-
-        // 🌟 [추가] XML에 매핑해 둔 tvGuestNotice 텍스트뷰 찾아오기
         TextView tvGuestNotice = view.findViewById(R.id.tvGuestNotice);
 
         clearAllGroups();
@@ -286,41 +288,10 @@ public class InputFragment extends Fragment {
         String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
 
         SharedPreferences pref = requireActivity().getSharedPreferences("DailyRecords_" + userSuffix, Context.MODE_PRIVATE);
-
-        if (currentUser == null) {
-            // 🌟 [추가 기획 이식] 게스트 모드일 때 안내문구 강제로 화면에 노출시키기
-            if (tvGuestNotice != null) {
-                tvGuestNotice.setVisibility(View.VISIBLE);
-            }
-
-            GuestRecordStore.clearIfNotToday(requireContext());
-
-            String currentAllRecords = pref.getString("all_records", "");
-            String todayDate = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-
-            if (!currentAllRecords.isEmpty()) {
-                boolean isTodayRecordExist = false;
-                for (String r : currentAllRecords.split("##")) {
-                    if (r.startsWith(todayDate)) {
-                        isTodayRecordExist = true;
-                        break;
-                    }
-                }
-                if (!isTodayRecordExist) {
-                    pref.edit().putString("all_records", "").apply();
-                    Log.d("GuestMode", "24시 자정이 지나 게스트 데이터가 안전하게 자동 파기 및 초기화되었습니다. 🧼");
-                }
-            }
-        } else {
-            // 🌟 [추가 기획 이식] 로그인 계정일 때는 안내문구를 완벽하게 숨기기
-            if (tvGuestNotice != null) {
-                tvGuestNotice.setVisibility(View.GONE);
-            }
-        }
-
         String allRecords = pref.getString("all_records", "");
         String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
 
+        // 🌟 [순서 패치] 자정 폭파가 일어나기 전에 과거 기록 텍스트부터 먼저 안전하게 가로챕니다.
         String latestDiaryText = "";
         String latestDiaryDate = "";
 
@@ -342,12 +313,69 @@ public class InputFragment extends Fragment {
             }
         }
 
-        loadCustomQuestion(latestDiaryText, latestDiaryDate);
+        if (currentUser == null) {
+            if (tvGuestNotice != null) {
+                tvGuestNotice.setVisibility(View.VISIBLE);
+            }
 
-        if (currentUser != null) {
-            loadTodayRecordFromFirestore(view, currentUser.getUid(), today, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
-        } else {
+            GuestRecordStore.clearIfNotToday(requireContext());
+
+            if (!allRecords.isEmpty()) {
+                boolean isTodayRecordExist = false;
+                for (String r : allRecords.split("##")) {
+                    if (r.startsWith(today)) {
+                        isTodayRecordExist = true;
+                        break;
+                    }
+                }
+                if (!isTodayRecordExist) {
+                    pref.edit().putString("all_records", "").apply();
+                    allRecords = ""; // 로컬 변수 동기화 초기화
+                    Log.d("GuestMode", "24시 자정이 지나 게스트 데이터가 안전하게 자동 파기 및 초기화되었습니다. 🧼");
+                }
+            }
+
+            // 안전하게 추출한 어제 본문으로 게스트용 질문 로딩
+            loadCustomQuestion(latestDiaryText, latestDiaryDate);
             restoreTodayRecordFromLocal(view, allRecords, today, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
+
+        } else {
+            if (tvGuestNotice != null) {
+                tvGuestNotice.setVisibility(View.GONE);
+            }
+
+            // 🌟 [회원용 긴급 백업 관로 구축] 새 기기나 빌드에서 로컬 장부가 비어있다면, Firestore 서버에서 직접 과거 기록을 역추적해 옵니다!
+            if (latestDiaryText.isEmpty()) {
+                db.collection("users").document(currentUser.getUid()).collection("daily_records")
+                        .orderBy("timestamp", Query.Direction.DESCENDING)
+                        .limit(2)
+                        .get()
+                        .addOnSuccessListener(queryDocumentSnapshots -> {
+                            if (!isAdded()) return;
+                            String serverLatestText = "";
+                            String serverLatestDate = "";
+
+                            for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                                String timestamp = doc.getString("timestamp");
+                                if (timestamp != null && !timestamp.startsWith(today)) {
+                                    String diary = doc.getString("diary");
+                                    serverLatestText = "최근 일기 내용: " + (diary != null ? diary : "");
+                                    String aiQ = doc.getString("aiQuestion");
+                                    String aiA = doc.getString("aiAnswer");
+                                    if (aiQ != null && !aiQ.isEmpty()) {
+                                        serverLatestText += "\n이전 AI 질문: " + aiQ + "\n그 질문에 대한 답변: " + (aiA != null ? aiA : "답변 없음");
+                                    }
+                                    serverLatestDate = timestamp.split(" ")[0];
+                                    break;
+                                }
+                            }
+                            loadCustomQuestion(serverLatestText, serverLatestDate);
+                        });
+            } else {
+                loadCustomQuestion(latestDiaryText, latestDiaryDate);
+            }
+
+            loadTodayRecordFromFirestore(view, currentUser.getUid(), today, seekBar, tvScoreValue, etDiary, cbBreakfast, cbLunch, cbDinner, cbLateNight);
         }
     }
 
@@ -474,7 +502,7 @@ public class InputFragment extends Fragment {
                 if (detail.length > 10) setRadioCheckedByText(rgFeedback, detail[10]);
 
                 if (detail.length > 11 && tvAiQuestion != null) tvAiQuestion.setText(detail[11]);
-                if (detail.length > 12 && etAiAnswer != null) etAiAnswer.setText(detail[12]);
+                if (detail.length > 12 && etAiAnswer != null) etAiAnswer.setText(detail[12]); // 💡 오타 tvAiAnswer -> etAiAnswer 완벽 소생 수리!
                 break;
             }
         }
@@ -527,12 +555,21 @@ public class InputFragment extends Fragment {
 
     private void loadCustomQuestion(String latestDiary, final String latestDiaryDate) {
         if (latestDiary == null || latestDiary.trim().isEmpty() || model == null) {
-            if (tvAiQuestion != null) tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
+            if (tvAiQuestion != null) {
+                tvAiQuestion.setText("오늘 가장 임팩트 있었던 일을 한 문장으로 표현하면?");
+            }
             return;
         }
 
-        if (latestDiaryDate.equals(cachedQuestionTargetDate) && !cachedAiQuestion.isEmpty()) {
-            if (tvAiQuestion != null) tvAiQuestion.setText(cachedAiQuestion);
+        // 현재 기기에 활성화된 유저 정보 획득
+        FirebaseUser currentUser = FirebaseAuth.getInstance().getCurrentUser();
+        String userSuffix = (currentUser != null) ? currentUser.getUid() : "guest";
+
+        // 🌟 [격리벽 재건완료] 날짜뿐만 아니라 유저 접미사(UID)까지 완벽히 삼중 일치해야만 캐시를 열도록 안전장치 부활!
+        if (userSuffix.equals(cachedUserSuffix) && latestDiaryDate.equals(cachedQuestionTargetDate) && !cachedAiQuestion.isEmpty()) {
+            if (tvAiQuestion != null) {
+                tvAiQuestion.setText(cachedAiQuestion);
+            }
             return;
         }
 
@@ -563,11 +600,16 @@ public class InputFragment extends Fragment {
             public void onSuccess(GenerateContentResponse result) {
                 if (isAdded() && tvAiQuestion != null) {
                     String questionText = result.getText().trim();
+
+                    // 🌟 캐시를 구운 주인의 유저 명찰(userSuffix)도 세트로 영구 낙인 찍기
                     cachedAiQuestion = questionText;
                     cachedQuestionTargetDate = latestDiaryDate;
+                    cachedUserSuffix = userSuffix;
+
                     tvAiQuestion.setText(questionText);
                 }
             }
+
             @Override
             public void onFailure(Throwable t) {
                 if (isAdded() && tvAiQuestion != null) {
